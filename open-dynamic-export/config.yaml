@@ -1,1 +1,39 @@
-
+name: "Open Dynamic Export"
+version: "1.0.0"
+slug: "open-dynamic-export"
+description: "Dynamic solar export management with CSIP-AUS support"
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+init: false
+startup: application
+boot: auto
+hassio_api: true
+hassio_role: default
+ports:
+  3000/tcp: 3000
+ports_description:
+  3000/tcp: "Web UI and API"
+options:
+  config_file: |
+    {
+      "setpoints": {},
+      "inverters": [],
+      "inverterControl": {
+        "enabled": false
+      },
+      "meter": {
+        "type": "mqtt",
+        "host": "mqtt://core-mosquitto",
+        "topic": "ode/site"
+      }
+    }
+schema:
+  config_file: str
+  log_level: list(trace|debug|info|notice|warning|error|fatal)?
+environment:
+  CONFIG_PATH: "/data/config.json"
+  LOG_LEVEL: "info"
+image: "ghcr.io/{arch}-addon-open-dynamic-export"
