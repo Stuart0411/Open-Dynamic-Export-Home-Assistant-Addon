@@ -52,8 +52,8 @@ This repository contains a Home Assistant add-on for [Open Dynamic Export](https
     {
       "type": "mqtt",
       "host": "mqtt://core-mosquitto",
-      "username": "nexus",
-      "password": "nexus-pass",
+      "username": "user",
+      "password": "password",
       "topic": "inverters/1"
     }
   ],
@@ -63,15 +63,15 @@ This repository contains a Home Assistant add-on for [Open Dynamic Export](https
   "meter": {
     "type": "mqtt",
     "host": "mqtt://core-mosquitto",
-    "username": "nexus",
-    "password": "nexus-pass",
+    "username": "user",
+    "password": "password",
     "topic": "site"
   },
   "publish": {
     "mqtt": {
       "host": "mqtt://core-mosquitto",
-      "username": "nexus",
-      "password": "nexus-pass",
+      "username": "user",
+      "password": "password",
       "topic": "ode/limits"
     }
   }
