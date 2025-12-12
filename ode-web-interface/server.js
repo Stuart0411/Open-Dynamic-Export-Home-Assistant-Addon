@@ -14,9 +14,6 @@ const ODE_URL = `http://${ODE_HOST}:${ODE_PORT}`;
 
 console.log(`[INFO] Proxying to ODE at: ${ODE_URL}`);
 
-// Serve static files
-app.use('/static', express.static(path.join(__dirname, 'public')));
-
 // Health check
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', target: ODE_URL });
