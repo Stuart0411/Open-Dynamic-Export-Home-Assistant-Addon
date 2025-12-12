@@ -12,33 +12,37 @@ echo "${CONFIG}" > /data/config.json
 
 echo "[INFO] Configuration written to /data/config.json"
 
-# Set log level
+# Set environment variables
 export LOG_LEVEL=$(cat /data/options.json | jq -r '.log_level // "info"')
 export CONFIG_PATH="/data/config.json"
+export SERVER_PORT="3000"
+export SERVER_HOST="0.0.0.0"
 
 echo "[INFO] Log level: ${LOG_LEVEL}"
 echo "[INFO] Config path: ${CONFIG_PATH}"
+echo "[INFO] Server will listen on: ${SERVER_HOST}:${SERVER_PORT}"
 
-# The pre-built image has the app in /app
+# Change to app directory
 cd /app
 
-# Check what files exist
-echo "[INFO] Application directory contents:"
+# Debug: Show directory structure
+echo "[INFO] Application directory structure:"
 ls -la
+if [ -d "dist/src" ]; then
+    echo "[INFO] dist/src contents:"
+    ls -la dist/src/
+fi
 
-# Find and run the correct entry point
-if [ -f "dist/index.js" ]; then
-    echo "[INFO] Starting application from dist/index.js"
-    exec node dist/index.js
-elif [ -f "dist/src/index.js" ]; then
-    echo "[INFO] Starting application from dist/src/index.js"
+# Try to find and run the entry point
+if [ -f "dist/src/index.js" ]; then
+    echo "[INFO] Starting from dist/src/index.js"
     exec node dist/src/index.js
-elif [ -f "index.js" ]; then
-    echo "[INFO] Starting application from index.js"
-    exec node index.js
+elif [ -f "dist/index.js" ]; then
+    echo "[INFO] Starting from dist/index.js"
+    exec node dist/index.js
 else
     echo "[ERROR] Cannot find application entry point"
-    echo "[ERROR] Directory structure:"
-    find /app -name "*.js" -type f
+    echo "[ERROR] Searching for JavaScript files:"
+    find /app -type f -name "*.js" | head -20
     exit 1
 fi
