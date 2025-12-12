@@ -17,6 +17,11 @@ export LOG_LEVEL=$(cat /data/options.json | jq -r '.log_level // "info"')
 export CONFIG_PATH="/data/config.json"
 export SERVER_PORT="3000"
 export SERVER_HOST="0.0.0.0"
+export TZ="UTC"
+export CONFIG_DIR="/data"
+export SEP2_CERT_FILE="/app/config/sep2-cert.pem"
+export SEP2_KEY_FILE="/app/config/sep2-key.pem"
+export SEP2_PEN="12345"
 
 echo "[INFO] Log level: ${LOG_LEVEL}"
 echo "[INFO] Config path: ${CONFIG_PATH}"
