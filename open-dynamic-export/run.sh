@@ -25,24 +25,13 @@ echo "[INFO] Server will listen on: ${SERVER_HOST}:${SERVER_PORT}"
 # Change to app directory
 cd /app
 
-# Debug: Show directory structure
-echo "[INFO] Application directory structure:"
-ls -la
-if [ -d "dist/src" ]; then
-    echo "[INFO] dist/src contents:"
-    ls -la dist/src/
-fi
-
-# Try to find and run the entry point
-if [ -f "dist/src/index.js" ]; then
-    echo "[INFO] Starting from dist/src/index.js"
-    exec node dist/src/index.js
-elif [ -f "dist/index.js" ]; then
-    echo "[INFO] Starting from dist/index.js"
-    exec node dist/index.js
+echo "[INFO] Checking for app.js..."
+if [ -f "dist/src/app.js" ]; then
+    echo "[INFO] Found dist/src/app.js - starting application"
+    exec node dist/src/app.js
 else
-    echo "[ERROR] Cannot find application entry point"
-    echo "[ERROR] Searching for JavaScript files:"
-    find /app -type f -name "*.js" | head -20
+    echo "[ERROR] dist/src/app.js not found!"
+    echo "[ERROR] Directory contents:"
+    ls -la dist/src/
     exit 1
 fi
