@@ -10,20 +10,46 @@ RUN apk add --no-cache \
     npm \
     git \
     bash \
-    jq
+    jq \
+    python3 \
+    make \
+    g++
 
 # Verify Node.js installation
 RUN node --version && npm --version
 
-# Clone and build Open Dynamic Export
+# Clone Open Dynamic Export
 WORKDIR /app
 RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . && \
-    npm ci && \
-    npm run build && \
-    echo "Build complete. Checking output:" && \
+    echo "Repository cloned. Contents:" && \
+    ls -la
+
+# Install ALL dependencies (including dev dependencies for building)
+RUN npm ci && \
+    echo "Dependencies installed. Checking for TypeScript:" && \
+    npx tsc --version || echo "TypeScript not found"
+
+# Build the project
+RUN npm run build && \
+    echo "Build command completed. Checking output:" && \
     ls -la && \
-    ls -la dist/ || echo "No dist folder" && \
-    ls -la dist/src/ || echo "No dist/src folder"
+    if [ -d "dist" ]; then \
+        echo "dist folder exists:" && \
+        ls -la dist/ && \
+        if [ -d "dist/src" ]; then \
+            echo "dist/src exists:" && \
+            ls -la dist/src/ && \
+            if [ -f "dist/src/index.js" ]; then \
+                echo "SUCCESS: Entry point found at dist/src/index.js"; \
+            else \
+                echo "ERROR: dist/src/index.js not found" && exit 1; \
+            fi; \
+        else \
+            echo "ERROR: dist/src folder not found" && exit 1; \
+        fi; \
+    else \
+        echo "ERROR: dist folder not created" && exit 1; \
+    fi
 
 # Create .env file for ODE
 RUN echo "SERVER_PORT=3000" > /app/.env && \
