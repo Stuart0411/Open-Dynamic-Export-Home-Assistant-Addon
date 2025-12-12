@@ -25,6 +25,11 @@ RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . &
     ls -la dist/ || echo "No dist folder" && \
     ls -la dist/src/ || echo "No dist/src folder"
 
+# Create .env file for ODE
+RUN echo "SERVER_PORT=3000" > /app/.env && \
+    echo "SERVER_HOST=0.0.0.0" >> /app/.env && \
+    cat /app/.env
+
 # Copy run script
 COPY run.sh /
 RUN chmod a+x /run.sh
