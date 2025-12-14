@@ -1,5 +1,5 @@
 name: "Open Dynamic Export"
-version: "1.0.0"
+version: "1.1.3"
 slug: "open-dynamic-export"
 description: "Dynamic solar export management with CSIP-AUS support"
 url: "https://github.com/longzheng/open-dynamic-export"
@@ -13,10 +13,7 @@ startup: application
 boot: auto
 hassio_api: true
 hassio_role: default
-ingress: true
-ingress_port: 3000
-panel_icon: mdi:solar-power
-panel_title: "Open Dynamic Export"
+webui: "http://[HOST]:[PORT:3000]"
 ports:
   3000/tcp: 3000
 ports_description:
