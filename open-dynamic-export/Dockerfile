@@ -25,6 +25,9 @@ RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git .
 # Install dependencies and build
 RUN npm ci && npm run build
 
+# Set environment variable to allow all hosts
+ENV VITE_ALLOWED_HOSTS="all"
+
 # Create .env file
 RUN echo "SERVER_PORT=3000" > /app/.env && \
     echo "SERVER_HOST=0.0.0.0" >> /app/.env && \
