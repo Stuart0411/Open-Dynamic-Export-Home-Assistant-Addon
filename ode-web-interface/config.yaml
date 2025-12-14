@@ -1,5 +1,5 @@
 name: "ODE Web Interface"
-version: "1.0.0"
+version: "1.0.3"
 slug: "ode-web-interface"
 description: "Web interface for Open Dynamic Export with Ingress support"
 url: "https://github.com/longzheng/open-dynamic-export"
