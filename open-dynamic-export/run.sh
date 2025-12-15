@@ -31,13 +31,27 @@ ODE_PID=$!
 
 # Wait for ODE to start
 echo "[INFO] Waiting for ODE backend to be ready..."
-for i in {1..30}; do
-    if curl -s http://localhost:3000/coordinator/status > /dev/null 2>&1; then
-        echo "[INFO] ODE backend is ready!"
+RETRIES=0
+MAX_RETRIES=30
+until curl -s http://localhost:3000/coordinator/status > /dev/null 2>&1; do
+    RETRIES=$((RETRIES+1))
+    if [ $RETRIES -ge $MAX_RETRIES ]; then
+        echo "[ERROR] ODE backend failed to start after ${MAX_RETRIES} seconds"
+        echo "[ERROR] Checking if process is running..."
+        ps aux | grep node
+        echo "[ERROR] Attempting to fetch status anyway..."
+        curl -v http://localhost:3000/coordinator/status || true
         break
     fi
+    echo "[INFO] Waiting... (${RETRIES}/${MAX_RETRIES})"
     sleep 1
 done
+
+if [ $RETRIES -lt $MAX_RETRIES ]; then
+    echo "[INFO] ODE backend is ready!"
+else
+    echo "[WARNING] Continuing anyway - ODE might still be starting..."
+fi
 
 echo "[INFO] Starting Ingress web interface on port 8099..."
 cd /app
