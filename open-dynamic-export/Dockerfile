@@ -22,7 +22,7 @@ RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . &
 # Set up Ingress web interface
 WORKDIR /app
 COPY requirements.txt ./
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip3 install --break-system-packages --no-cache-dir -r requirements.txt
 
 COPY app.py ./
 COPY templates/ ./templates/
