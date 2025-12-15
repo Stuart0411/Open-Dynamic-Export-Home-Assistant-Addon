@@ -24,19 +24,27 @@ RUN apk add --no-cache \
 WORKDIR /ode
 RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . && \
     npm ci && \
-    npm run build  # Builds both backend and React UI (dist folder)
+    npm run build  # Builds backend and React UI (dist folder)
 
 # -------------------------------
-# Set up Flask ingress interface
+# Set up Python virtual environment for Flask
 # -------------------------------
 WORKDIR /app
 COPY requirements.txt ./
-RUN pip3 install --no-cache-dir -r requirements.txt
 
-# Copy Flask app and templates
+# Create venv and install dependencies inside it
+RUN python3 -m venv /venv \
+    && . /venv/bin/activate \
+    && pip install --no-cache-dir -r requirements.txt
+
+# Add venv to PATH so Python and pip use the virtual environment
+ENV PATH="/venv/bin:$PATH"
+
+# Copy Flask app
 COPY app.py ./
 
 # Copy startup script
 COPY run.sh /
 RUN chmod a+x /run.sh
 
+# No EXPOSE needed for ingress (Home Assistant handles proxying)
