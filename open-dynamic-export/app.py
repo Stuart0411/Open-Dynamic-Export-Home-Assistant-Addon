@@ -23,6 +23,8 @@ def proxy_api(path):
     try:
         url = f"{ODE_API}/{path}"
         
+        print(f"[DEBUG] Proxying {request.method} {url}")
+        
         # Forward the request to ODE
         if request.method == 'GET':
             response = requests.get(url, params=request.args, timeout=10)
@@ -33,10 +35,24 @@ def proxy_api(path):
         elif request.method == 'DELETE':
             response = requests.delete(url, timeout=10)
         
-        return response.content, response.status_code, response.headers.items()
-    except requests.exceptions.ConnectionError:
-        return jsonify({"error": "ODE backend not available"}), 502
+        print(f"[DEBUG] ODE response: {response.status_code}")
+        
+        # Check if response is JSON
+        try:
+            data = response.json()
+            return jsonify(data), response.status_code
+        except:
+            # Not JSON, return as-is
+            return response.content, response.status_code, {'Content-Type': response.headers.get('Content-Type', 'text/plain')}
+            
+    except requests.exceptions.ConnectionError as e:
+        print(f"[ERROR] Connection error to ODE: {e}")
+        return jsonify({"error": "ODE backend not available", "details": str(e)}), 502
+    except requests.exceptions.Timeout as e:
+        print(f"[ERROR] Timeout connecting to ODE: {e}")
+        return jsonify({"error": "ODE backend timeout", "details": str(e)}), 504
     except Exception as e:
+        print(f"[ERROR] Unexpected error: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/health')
