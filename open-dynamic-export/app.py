@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 import os
 import requests
@@ -22,10 +23,8 @@ def proxy_api(path):
     """Proxy all API requests to ODE backend"""
     try:
         url = f"{ODE_API}/{path}"
-        
         print(f"[DEBUG] Proxying {request.method} {url}")
-        
-        # Forward the request to ODE
+
         if request.method == 'GET':
             response = requests.get(url, params=request.args, timeout=10)
         elif request.method == 'POST':
@@ -34,25 +33,17 @@ def proxy_api(path):
             response = requests.put(url, json=request.json, timeout=10)
         elif request.method == 'DELETE':
             response = requests.delete(url, timeout=10)
-        
-        print(f"[DEBUG] ODE response: {response.status_code}")
-        
-        # Check if response is JSON
+
         try:
             data = response.json()
             return jsonify(data), response.status_code
         except:
-            # Not JSON, return as-is
             return response.content, response.status_code, {'Content-Type': response.headers.get('Content-Type', 'text/plain')}
-            
     except requests.exceptions.ConnectionError as e:
-        print(f"[ERROR] Connection error to ODE: {e}")
         return jsonify({"error": "ODE backend not available", "details": str(e)}), 502
     except requests.exceptions.Timeout as e:
-        print(f"[ERROR] Timeout connecting to ODE: {e}")
         return jsonify({"error": "ODE backend timeout", "details": str(e)}), 504
     except Exception as e:
-        print(f"[ERROR] Unexpected error: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/health')
@@ -67,5 +58,6 @@ def health():
         return jsonify({"status": "error", "ode": "offline"}), 503
 
 if __name__ == '__main__':
-    print("[INFO] Starting ODE Ingress Web Interface on port 8099")
-    app.run(host='0.0.0.0', port=8099, debug=False)
+    port = int(os.getenv("INGRESS_PORT", 8099))  # Dynamic ingress port
+    print(f"[INFO] Starting ODE Ingress Web Interface on port {port}")
+    app.run(host='0.0.0.0', port=port, debug=False)
