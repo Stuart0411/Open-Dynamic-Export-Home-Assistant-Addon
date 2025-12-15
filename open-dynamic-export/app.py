@@ -1,8 +1,8 @@
-
 #!/usr/bin/env python3
 import os
+import re
 import requests
-from flask import Flask, send_from_directory, request, jsonify
+from flask import Flask, send_from_directory, request, jsonify, send_file
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
@@ -12,36 +12,58 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 ODE_API = "http://localhost:3000"
 
 # Path to React UI build
-ODE_UI_PATH = "/ode/dist"
+ODE_UI_PATH = "/ode/dist/ui"  # Note: ODE builds to dist/ui, not just dist
 
 # -------------------------------
 # Serve React UI (SPA)
 # -------------------------------
-@app.route('/', defaults={'path': ''})
+@app.route('/')
+def serve_index():
+    """
+    Serve index.html with injected base path for Ingress compatibility.
+    """
+    ingress_path = request.headers.get('X-Ingress-Path', '')
+    
+    index_path = os.path.join(ODE_UI_PATH, 'index.html')
+    
+    if not os.path.exists(index_path):
+        return jsonify({"error": "UI not found", "path": index_path}), 404
+    
+    with open(index_path, 'r') as f:
+        html = f.read()
+    
+    # Inject base tag for Ingress path
+    if ingress_path:
+        base_tag = f'<base href="{ingress_path}/">'
+        html = html.replace('<head>', f'<head>\n    {base_tag}')
+    
+    return html, 200, {'Content-Type': 'text/html'}
+
 @app.route('/<path:path>')
-def serve_ui(path):
+def serve_static(path):
     """
-    Serve the React UI from /ode/dist.
-    If the requested file exists, serve it.
-    Otherwise, serve index.html for SPA routing.
+    Serve static assets from the UI build.
     """
-    full_path = os.path.join(ODE_UI_PATH, path)
-    if path != "" and os.path.exists(full_path):
-        return send_from_directory(ODE_UI_PATH, path)
-    return send_from_directory(ODE_UI_PATH, 'index.html')
+    return send_from_directory(ODE_UI_PATH, path)
 
 # -------------------------------
 # API Proxy Routes
 # -------------------------------
-@app.route('/api/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
+@app.route('/coordinator/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
+@app.route('/sep2/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
+@app.route('/docs/<path:path>', methods=['GET'])
 def proxy_api(path):
     """
     Proxy API requests to ODE backend.
+    Matches ODE's actual API routes.
     """
     try:
-        url = f"{ODE_API}/{path}"
+        # Reconstruct the full path including the route prefix
+        route_prefix = request.path.split('/')[1]  # Get 'coordinator', 'sep2', or 'docs'
+        url = f"{ODE_API}/{route_prefix}/{path}"
+        
         print(f"[DEBUG] Proxying {request.method} {url}")
-
+        
         if request.method == 'GET':
             response = requests.get(url, params=request.args, timeout=10)
         elif request.method == 'POST':
@@ -50,7 +72,7 @@ def proxy_api(path):
             response = requests.put(url, json=request.json, timeout=10)
         elif request.method == 'DELETE':
             response = requests.delete(url, timeout=10)
-
+        
         # Return JSON if possible
         try:
             data = response.json()
@@ -60,10 +82,13 @@ def proxy_api(path):
                 'Content-Type': response.headers.get('Content-Type', 'text/plain')
             }
     except requests.exceptions.ConnectionError as e:
+        print(f"[ERROR] Connection error: {e}")
         return jsonify({"error": "ODE backend not available", "details": str(e)}), 502
     except requests.exceptions.Timeout as e:
+        print(f"[ERROR] Timeout: {e}")
         return jsonify({"error": "ODE backend timeout", "details": str(e)}), 504
     except Exception as e:
+        print(f"[ERROR] Unexpected error: {e}")
         return jsonify({"error": str(e)}), 500
 
 # -------------------------------
@@ -79,14 +104,23 @@ def health():
         if response.ok:
             return jsonify({"status": "ok", "ode": "running"})
         return jsonify({"status": "degraded", "ode": "error"}), 503
-    except:
+    except Exception as e:
+        print(f"[ERROR] Health check failed: {e}")
         return jsonify({"status": "error", "ode": "offline"}), 503
 
 # -------------------------------
 # Start Flask App
 # -------------------------------
 if __name__ == '__main__':
-    port = int(os.getenv("INGRESS_PORT", 8099))  # Dynamic ingress port
+    port = int(os.getenv("INGRESS_PORT", 8099))
     print(f"[INFO] Starting ODE Ingress Web Interface on port {port}")
+    print(f"[INFO] UI Path: {ODE_UI_PATH}")
+    print(f"[INFO] ODE API: {ODE_API}")
+    
+    # Check if UI exists
+    if os.path.exists(ODE_UI_PATH):
+        print(f"[INFO] UI directory found")
+    else:
+        print(f"[ERROR] UI directory not found at {ODE_UI_PATH}")
+    
     app.run(host='0.0.0.0', port=port, debug=False)
-
