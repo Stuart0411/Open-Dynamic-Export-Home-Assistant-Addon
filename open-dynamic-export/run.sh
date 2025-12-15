@@ -1,3 +1,4 @@
+
 #!/usr/bin/env bash
 set -e
 
@@ -17,14 +18,14 @@ echo "[INFO] Configuration written to /data/config.json"
 export LOG_LEVEL=$(cat /data/options.json | jq -r '.log_level // "info"')
 export CONFIG_PATH="/data/config.json"
 export SERVER_PORT="3000"
-export SERVER_HOST="127.0.0.1"  # Only listen on localhost
+export SERVER_HOST="0.0.0.0"   # Changed from 127.0.0.1 for better compatibility
 export TZ="UTC"
 export CONFIG_DIR="/data"
 export SEP2_CERT_FILE="/ode/config/sep2-cert.pem"
 export SEP2_KEY_FILE="/ode/config/sep2-key.pem"
 export SEP2_PEN="12345"
 
-echo "[INFO] Starting ODE backend on port 3000..."
+echo "[INFO] Starting ODE backend on port ${SERVER_PORT}..."
 cd /ode
 node dist/src/app.js &
 ODE_PID=$!
@@ -33,35 +34,29 @@ ODE_PID=$!
 echo "[INFO] Waiting for ODE backend to be ready..."
 RETRIES=0
 MAX_RETRIES=30
-until curl -s http://localhost:3000/coordinator/status > /dev/null 2>&1; do
-    RETRIES=$((RETRIES+1))
-    if [ $RETRIES -ge $MAX_RETRIES ]; then
-        echo "[ERROR] ODE backend failed to start after ${MAX_RETRIES} seconds"
-        echo "[ERROR] Checking if process is running..."
-        ps aux | grep node
-        echo "[ERROR] Attempting to fetch status anyway..."
-        curl -v http://localhost:3000/coordinator/status || true
-        break
-    fi
-    echo "[INFO] Waiting... (${RETRIES}/${MAX_RETRIES})"
-    sleep 1
+until curl -s http://localhost:${SERVER_PORT}/coordinator/status > /dev/null 2>&1; do
+  RETRIES=$((RETRIES+1))
+  if [ $RETRIES -ge $MAX_RETRIES ]; then
+    echo "[ERROR] ODE backend failed to start after ${MAX_RETRIES} seconds"
+    break
+  fi
+  echo "[INFO] Waiting... (${RETRIES}/${MAX_RETRIES})"
+  sleep 1
 done
 
-if [ $RETRIES -lt $MAX_RETRIES ]; then
-    echo "[INFO] ODE backend is ready!"
-else
-    echo "[WARNING] Continuing anyway - ODE might still be starting..."
-fi
+echo "[INFO] ODE backend is ready!"
 
-echo "[INFO] Starting Ingress web interface on port 8099..."
+# Start Ingress web interface
+echo "[INFO] Starting Ingress web interface on port ${INGRESS_PORT:-8099}..."
 cd /app
+export INGRESS_PORT=${INGRESS_PORT:-8099}
 python3 app.py &
 WEB_PID=$!
 
 echo "[INFO] =========================================="
 echo "[INFO] All services started successfully"
-echo "[INFO] ODE Backend: http://localhost:3000"
-echo "[INFO] Web Interface: http://localhost:8099"
+echo "[INFO] ODE Backend: http://localhost:${SERVER_PORT}"
+echo "[INFO] Web Interface: Ingress managed by Home Assistant"
 echo "[INFO] =========================================="
 
 # Wait for both processes
