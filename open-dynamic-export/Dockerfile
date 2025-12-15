@@ -26,7 +26,9 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 
 COPY app.py ./
 COPY templates/ ./templates/
-COPY static/ ./static/
+
+# Create empty static directory (for future use)
+RUN mkdir -p ./static
 
 # Copy startup script
 COPY run.sh /
