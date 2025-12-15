@@ -1,10 +1,7 @@
 ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest
 FROM ${BUILD_FROM}
 
-# Set shell
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-# Install Node.js and dependencies
+# Install Node.js and Python
 RUN apk add --no-cache \
     nodejs \
     npm \
@@ -12,37 +9,29 @@ RUN apk add --no-cache \
     bash \
     jq \
     python3 \
+    py3-pip \
     make \
     g++
 
-# Verify versions
-RUN node --version && npm --version
+# Build ODE backend
+WORKDIR /ode
+RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . && \
+    npm ci && \
+    npm run build
 
-# Clone repository
+# Set up Ingress web interface
 WORKDIR /app
-RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git .
+COPY requirements.txt ./
+RUN pip3 install --no-cache-dir -r requirements.txt
 
-# Install dependencies and build
-RUN npm ci && npm run build
+COPY app.py ./
+COPY templates/ ./templates/
+COPY static/ ./static/
 
-# Set environment variable to allow all hosts
-ENV VITE_ALLOWED_HOSTS="all"
-
-# Create .env file
-RUN echo "SERVER_PORT=3000" > /app/.env && \
-    echo "SERVER_HOST=0.0.0.0" >> /app/.env && \
-    echo "TZ=UTC" >> /app/.env && \
-    echo "CONFIG_DIR=/data" >> /app/.env && \
-    echo "SEP2_CERT_FILE=/app/config/sep2-cert.pem" >> /app/.env && \
-    echo "SEP2_KEY_FILE=/app/config/sep2-key.pem" >> /app/.env && \
-    echo "SEP2_PEN=12345" >> /app/.env && \
-    cat /app/.env
-
-# Copy run script
+# Copy startup script
 COPY run.sh /
 RUN chmod a+x /run.sh
 
-EXPOSE 3000
-WORKDIR /app
+EXPOSE 8099
 
 CMD ["/run.sh"]
