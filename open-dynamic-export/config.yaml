@@ -15,11 +15,8 @@ ingress: true
 ingress_port: 8099
 panel_icon: mdi:solar-power
 panel_title: "Solar Export"
-ports: {
+ports:
   3000/tcp: null
-  8099/tcp: null
-},
-webui: [PROTO:ssl]://[HOST]:[PORT]
 ports_description:
   3000/tcp: "ODE API (internal only)"
 options:
