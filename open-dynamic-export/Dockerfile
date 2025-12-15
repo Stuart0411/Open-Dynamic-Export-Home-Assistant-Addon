@@ -1,3 +1,4 @@
+
 ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest
 FROM ${BUILD_FROM}
 
@@ -22,18 +23,15 @@ RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . &
 # Set up Ingress web interface
 WORKDIR /app
 COPY requirements.txt ./
-RUN pip3 install --break-system-packages --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 COPY app.py ./
 COPY templates/ ./templates/
-
-# Create empty static directory (for future use)
-RUN mkdir -p ./static
+COPY static/ ./static/
 
 # Copy startup script
 COPY run.sh /
 RUN chmod a+x /run.sh
 
-EXPOSE 8099
-
+# No EXPOSE needed for ingress
 CMD ["/run.sh"]
