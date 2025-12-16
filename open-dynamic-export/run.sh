@@ -24,11 +24,16 @@ export SEP2_CERT_FILE="/ode/config/sep2-cert.pem"
 export SEP2_KEY_FILE="/ode/config/sep2-key.pem"
 export SEP2_PEN="12345"
 
-# Get dynamic ingress port (critical!)
-export INGRESS_PORT=${INGRESS_PORT:-8099}
+# CRITICAL: Read the actual ingress port set by Home Assistant
+# Home Assistant sets this when ingress_port: 0 in config
+if [ -z "$INGRESS_PORT" ]; then
+    echo "[WARNING] INGRESS_PORT not set by supervisor, using default 8099"
+    export INGRESS_PORT=8099
+fi
 
 echo "[INFO] ODE Backend will listen on: 127.0.0.1:3000"
 echo "[INFO] Flask UI will listen on: 0.0.0.0:${INGRESS_PORT}"
+echo "[INFO] INGRESS_PORT from environment: ${INGRESS_PORT}"
 
 # Start ODE backend
 echo "[INFO] Starting ODE backend..."
@@ -59,23 +64,37 @@ cd /app
 python3 app.py > /tmp/flask.log 2>&1 &
 WEB_PID=$!
 
-# Wait a moment for Flask to start
-sleep 2
+# Wait for Flask to start (check if port is listening)
+echo "[INFO] Waiting for Flask to start..."
+sleep 3
 
-# Check if Flask started
-if ! ps -p $WEB_PID > /dev/null; then
-    echo "[ERROR] Flask failed to start!"
-    echo "[ERROR] Flask logs:"
-    cat /tmp/flask.log
-    exit 1
+# Check if Flask port is listening (BusyBox compatible)
+if netstat -tln 2>/dev/null | grep -q ":${INGRESS_PORT}"; then
+    echo "[INFO] Flask is listening on port ${INGRESS_PORT}"
+elif ss -tln 2>/dev/null | grep -q ":${INGRESS_PORT}"; then
+    echo "[INFO] Flask is listening on port ${INGRESS_PORT}"
+else
+    echo "[WARNING] Cannot verify Flask port, checking process..."
+    if kill -0 $WEB_PID 2>/dev/null; then
+        echo "[INFO] Flask process is running (PID: $WEB_PID)"
+    else
+        echo "[ERROR] Flask process died!"
+        echo "[ERROR] Flask logs:"
+        cat /tmp/flask.log
+        exit 1
+    fi
 fi
 
 echo "[INFO] =========================================="
 echo "[INFO] All services started successfully!"
 echo "[INFO] ODE Backend PID: $ODE_PID"
 echo "[INFO] Flask UI PID: $WEB_PID"
-echo "[INFO] Flask listening on port: ${INGRESS_PORT}"
+echo "[INFO] Flask listening on: 0.0.0.0:${INGRESS_PORT}"
 echo "[INFO] =========================================="
+
+# Show initial logs
+echo "[INFO] Recent Flask output:"
+tail -n 10 /tmp/flask.log
 
 # Function to cleanup on exit
 cleanup() {
@@ -86,18 +105,6 @@ cleanup() {
 
 trap cleanup SIGTERM SIGINT
 
-# Keep script running and show logs
-echo "[INFO] Tailing logs (Ctrl+C to stop)..."
+# Keep script running and tail logs
 tail -f /tmp/ode.log /tmp/flask.log &
-TAIL_PID=$!
-
-# Wait for processes
 wait $ODE_PID $WEB_PID
-
-# If we get here, a process died
-echo "[ERROR] A service has stopped unexpectedly!"
-echo "[ERROR] ODE logs:"
-cat /tmp/ode.log
-echo "[ERROR] Flask logs:"
-cat /tmp/flask.log
-exit 1
