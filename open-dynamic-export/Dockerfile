@@ -1,4 +1,3 @@
-
 # Use Home Assistant base image
 ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest
 FROM ${BUILD_FROM}
@@ -16,7 +15,8 @@ RUN apk add --no-cache \
     python3 \
     py3-pip \
     make \
-    g++
+    g++ \
+    curl
 
 # -------------------------------
 # Build ODE backend and frontend
@@ -24,7 +24,9 @@ RUN apk add --no-cache \
 WORKDIR /ode
 RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . && \
     npm ci && \
-    npm run build  # Builds backend and React UI (dist folder)
+    npm run build && \
+    echo "[BUILD] ODE built successfully" && \
+    ls -la dist/
 
 # -------------------------------
 # Set up Python virtual environment for Flask
@@ -48,3 +50,6 @@ COPY run.sh /
 RUN chmod a+x /run.sh
 
 # No EXPOSE needed for ingress (Home Assistant handles proxying)
+
+# THIS WAS MISSING - Run the startup script
+CMD ["/run.sh"]
