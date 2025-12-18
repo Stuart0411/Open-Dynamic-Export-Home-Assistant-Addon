@@ -25,10 +25,16 @@ WORKDIR /ode
 RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . && \
     npm ci && \
     npm run build && \
-    echo "[BUILD] ODE built successfully" && \
-    ls -la dist/assets && \
+    echo "[DEBUG] Directory listing after build:" && ls -la dist && \
+    echo "[DEBUG] Assets:" && ls -la dist/assets && \
     test -f dist/assets/index-DmTm1MAP.css && \
     test -f dist/assets/index-j2rvzFcy.js
+
+# -------------------------------
+# Validate build output
+# -------------------------------
+RUN mkdir -p /dist && mv dist /dist
+COPY /dist /ode/dist
 
 # -------------------------------
 # Set up Python virtual environment for Flask
@@ -50,9 +56,6 @@ COPY app.py ./
 # Copy startup script
 COPY run.sh /
 RUN chmod a+x /run.sh
-
-# Validate asset copy
-COPY dist /ode/dist
 
 # -------------------------------
 # Health Check
