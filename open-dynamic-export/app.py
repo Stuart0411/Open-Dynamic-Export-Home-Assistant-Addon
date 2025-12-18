@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import os
-import re
 import mimetypes
 import requests
 from flask import Flask, send_file, request, jsonify, Response
@@ -16,113 +15,96 @@ mimetypes.add_type('text/css', '.css')
 
 # ODE backend API
 ODE_API = "http://localhost:3000"
-
-# Path to React UI build
 ODE_UI_PATH = "/ode/dist/ui"
 
 # -------------------------------
-# Serve React UI (SPA)
+# Serve React UI
 # -------------------------------
 @app.route('/')
 def serve_index():
-    """
-    Serve index.html with rewritten asset paths for Ingress.
-    """
+    """Serve index.html"""
     ingress_path = request.headers.get('X-Ingress-Path', '')
-    print(f"[DEBUG] Serving index.html, Ingress-Path: '{ingress_path}'")
+    print(f"[INDEX] Ingress-Path: '{ingress_path}'")
     
     index_path = os.path.join(ODE_UI_PATH, 'index.html')
     
     if not os.path.exists(index_path):
-        return jsonify({
-            "error": "UI not found", 
-            "path": index_path
-        }), 404
+        return jsonify({"error": "UI not found"}), 404
     
     with open(index_path, 'r') as f:
         html = f.read()
     
-    # Rewrite asset paths to include ingress prefix
+    # Add base tag if ingress path exists
     if ingress_path and ingress_path != '/':
-        # Add base tag
         base_tag = f'<base href="{ingress_path}/">'
         html = html.replace('<head>', f'<head>\n    {base_tag}')
-        
-        # Rewrite absolute asset paths to relative
-        html = re.sub(r'href="(/[^"]+)"', rf'href="{ingress_path}\1"', html)
-        html = re.sub(r'src="(/[^"]+)"', rf'src="{ingress_path}\1"', html)
-        
-        print(f"[DEBUG] Rewrote paths with ingress prefix: {ingress_path}")
     
     return Response(html, mimetype='text/html')
 
 @app.route('/assets/<path:filename>')
 def serve_assets(filename):
-    """
-    Serve assets with correct MIME types.
-    """
+    """Serve assets"""
     file_path = os.path.join(ODE_UI_PATH, 'assets', filename)
-    print(f"[DEBUG] Serving asset: /assets/{filename}")
     
     if not os.path.exists(file_path):
-        print(f"[ERROR] Asset not found: {file_path}")
-        return jsonify({"error": f"Asset not found: {filename}"}), 404
+        print(f"[ASSET 404] {filename}")
+        return "Asset not found", 404
     
-    # Guess MIME type
     mime_type, _ = mimetypes.guess_type(filename)
     if not mime_type:
         if filename.endswith('.js'):
             mime_type = 'application/javascript'
         elif filename.endswith('.css'):
             mime_type = 'text/css'
-        elif filename.endswith('.json'):
-            mime_type = 'application/json'
         else:
             mime_type = 'application/octet-stream'
     
-    print(f"[DEBUG] Serving {filename} as {mime_type}")
-    
+    print(f"[ASSET] {filename} -> {mime_type}")
     return send_file(file_path, mimetype=mime_type)
 
-@app.route('/<path:path>')
-def serve_static(path):
-    """
-    Serve other static files or SPA routes.
-    """
-    print(f"[DEBUG] Request for: /{path}")
-    
-    file_path = os.path.join(ODE_UI_PATH, path)
-    
-    # If file exists, serve it
-    if os.path.exists(file_path) and os.path.isfile(file_path):
-        mime_type, _ = mimetypes.guess_type(path)
-        print(f"[DEBUG] Serving file: {path} as {mime_type}")
-        return send_file(file_path, mimetype=mime_type)
-    
-    # Otherwise, serve index for SPA routing
-    print(f"[DEBUG] SPA route, serving index.html")
-    return serve_index()
+# -------------------------------
+# API Proxy - CATCH ALL API ROUTES
+# -------------------------------
+@app.route('/coordinator', methods=['GET'])
+@app.route('/coordinator/', methods=['GET'])
+@app.route('/coordinator/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+def proxy_coordinator(path='status'):
+    """Proxy coordinator API calls"""
+    return proxy_to_ode('coordinator', path)
 
-# -------------------------------
-# API Proxy Routes
-# -------------------------------
-@app.route('/coordinator/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
-@app.route('/sep2/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
+@app.route('/sep2', methods=['GET'])
+@app.route('/sep2/', methods=['GET'])
+@app.route('/sep2/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+def proxy_sep2(path=''):
+    """Proxy SEP2 API calls"""
+    return proxy_to_ode('sep2', path)
+
 @app.route('/docs', methods=['GET'])
+@app.route('/docs/', methods=['GET'])
 @app.route('/docs/<path:path>', methods=['GET'])
-def proxy_api(path=''):
-    """
-    Proxy API requests to ODE backend.
-    """
+def proxy_docs(path=''):
+    """Proxy docs API calls"""
+    return proxy_to_ode('docs', path)
+
+def proxy_to_ode(prefix, path=''):
+    """Helper to proxy requests to ODE backend"""
     try:
-        route_prefix = request.path.split('/')[1]
         if path:
-            url = f"{ODE_API}/{route_prefix}/{path}"
+            url = f"{ODE_API}/{prefix}/{path}"
         else:
-            url = f"{ODE_API}/{route_prefix}"
+            url = f"{ODE_API}/{prefix}"
         
-        print(f"[DEBUG] Proxying {request.method} {url}")
+        print(f"[API] {request.method} {url}")
         
+        # Handle CORS preflight
+        if request.method == 'OPTIONS':
+            response = Response()
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = '*'
+            return response
+        
+        # Forward the request
         if request.method == 'GET':
             response = requests.get(url, params=request.args, timeout=10)
         elif request.method == 'POST':
@@ -132,47 +114,72 @@ def proxy_api(path=''):
         elif request.method == 'DELETE':
             response = requests.delete(url, timeout=10)
         
+        print(f"[API] {url} -> {response.status_code}")
+        
+        # Try to return JSON
         try:
             data = response.json()
             return jsonify(data), response.status_code
         except:
             return response.content, response.status_code, {
-                'Content-Type': response.headers.get('Content-Type', 'text/plain')
+                'Content-Type': response.headers.get('Content-Type', 'application/json')
             }
+            
     except requests.exceptions.ConnectionError as e:
-        print(f"[ERROR] Connection error: {e}")
-        return jsonify({"error": "ODE backend not available"}), 502
+        print(f"[API ERROR] Connection failed: {e}")
+        return jsonify({"error": "ODE backend offline", "details": str(e)}), 502
+    except requests.exceptions.Timeout as e:
+        print(f"[API ERROR] Timeout: {e}")
+        return jsonify({"error": "ODE backend timeout", "details": str(e)}), 504
     except Exception as e:
-        print(f"[ERROR] Unexpected error: {e}")
+        print(f"[API ERROR] {e}")
         return jsonify({"error": str(e)}), 500
 
 # -------------------------------
-# Health Check
+# Health endpoint
 # -------------------------------
 @app.route('/health')
 def health():
+    """Health check"""
     try:
         response = requests.get(f"{ODE_API}/coordinator/status", timeout=3)
         if response.ok:
-            return jsonify({"status": "ok", "ode": "running"})
-        return jsonify({"status": "degraded"}), 503
-    except:
-        return jsonify({"status": "error"}), 503
+            return jsonify({"status": "ok", "ode": "running"}), 200
+        return jsonify({"status": "degraded", "ode_status": response.status_code}), 503
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 503
 
 # -------------------------------
-# Start Flask App
+# Fallback for SPA routes
+# -------------------------------
+@app.route('/<path:path>')
+def catch_all(path):
+    """Catch-all for SPA routing"""
+    file_path = os.path.join(ODE_UI_PATH, path)
+    
+    # If it's a file, serve it
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        mime_type, _ = mimetypes.guess_type(path)
+        return send_file(file_path, mimetype=mime_type)
+    
+    # Otherwise serve index for SPA routing
+    print(f"[SPA] {path} -> index.html")
+    return serve_index()
+
+# -------------------------------
+# Start
 # -------------------------------
 if __name__ == '__main__':
     port = int(os.getenv("INGRESS_PORT", 8099))
-    print(f"[INFO] Starting ODE Ingress Web Interface on port {port}")
-    print(f"[INFO] UI Path: {ODE_UI_PATH}")
-    print(f"[INFO] ODE API: {ODE_API}")
+    print(f"[INFO] Starting on port {port}")
+    print(f"[INFO] UI: {ODE_UI_PATH}")
+    print(f"[INFO] API: {ODE_API}")
     
-    if os.path.exists(ODE_UI_PATH):
-        print(f"[INFO] UI directory found")
-        if os.path.exists(os.path.join(ODE_UI_PATH, 'assets')):
-            print(f"[INFO] Assets directory found")
-    else:
-        print(f"[ERROR] UI directory not found at {ODE_UI_PATH}")
+    # Test ODE connection
+    try:
+        test = requests.get(f"{ODE_API}/coordinator/status", timeout=2)
+        print(f"[INFO] ODE backend responding: {test.status_code}")
+    except Exception as e:
+        print(f"[WARNING] ODE backend not responding: {e}")
     
     app.run(host='0.0.0.0', port=port, debug=False)
