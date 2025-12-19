@@ -33,6 +33,10 @@ This repository contains a Home Assistant add-on for [Open Dynamic Export](https
 - MQTT user configured in Mosquitto
 - Home Assistant automations to publish meter/inverter data to MQTT
 
+## UI
+The default open dynamic exports UI can be accessed locally from your home assistant IP address or homeassistant.local:3000
+eg. 192.168.1.5:3000
+
 ## Configuration Example
 
 ```json
