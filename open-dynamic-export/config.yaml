@@ -1,5 +1,5 @@
 name: "Open Dynamic Export"
-version: "2.3.0"
+version: "2.3.1"
 slug: "open-dynamic-export"
 description: "Dynamic solar export management with CSIP-AUS support"
 url: "https://github.com/longzheng/open-dynamic-export"
