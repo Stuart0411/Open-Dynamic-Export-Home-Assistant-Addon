@@ -1,69 +1,31 @@
-# Use Home Assistant base image
 ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest
 FROM ${BUILD_FROM}
 
-# Set environment variables
-ENV LANG=C.UTF-8
-
-# Install Node.js, Python, and build tools
+# Install dependencies
 RUN apk add --no-cache \
-    nodejs=16.20.0 \
+    nodejs \
     npm \
     git \
     bash \
-    jq \
-    python3 \
-    py3-pip \
+    nginx \
     make \
-    g++ \
-    curl
+    g++
 
-# -------------------------------
-# Build ODE backend and frontend
-# -------------------------------
+# Build ODE backend
 WORKDIR /ode
 RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . && \
     npm ci && \
     npm run build && \
-    echo "[DEBUG] Directory listing after build:" && ls -la dist && \
-    echo "[DEBUG] Assets:" && ls -la dist/assets && \
-    test -f dist/assets/index-DmTm1MAP.css && \
-    test -f dist/assets/index-j2rvzFcy.js
+    echo "[BUILD] ODE built successfully"
 
-# -------------------------------
-# Validate build output
-# -------------------------------
-RUN mkdir -p /dist && mv dist /dist
-COPY /dist /ode/dist
-
-# -------------------------------
-# Set up Python virtual environment for Flask
-# -------------------------------
-WORKDIR /app
-COPY requirements.txt ./
-
-# Create virtual environment and install dependencies inside it
-RUN python3 -m venv /venv \
-    && . /venv/bin/activate \
-    && pip install --no-cache-dir -r requirements.txt
-
-# Add venv to PATH so Python and pip use the virtual environment
-ENV PATH="/venv/bin:$PATH"
-
-# Copy Flask app
-COPY app.py ./
+# Configure Nginx
+COPY ingress.conf /etc/nginx/http.d/ingress.conf
+RUN rm /etc/nginx/http.d/default.conf
 
 # Copy startup script
 COPY run.sh /
 RUN chmod a+x /run.sh
 
-# -------------------------------
-# Health Check
-# -------------------------------
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s \
-    CMD curl -f http://localhost:${PORT:-8099}/health || exit 1
+EXPOSE 8099
 
-# -------------------------------
-# Entrypoint
-# -------------------------------
-ENTRYPOINT ["/run.sh"]
+CMD ["/run.sh"]
