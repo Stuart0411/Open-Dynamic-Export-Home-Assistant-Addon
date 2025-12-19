@@ -1,5 +1,5 @@
 name: "Open Dynamic Export"
-version: "2.1.6"
+version: "2.2.0"
 slug: "open-dynamic-export"
 description: "Dynamic solar export management with CSIP-AUS support"
 url: "https://github.com/longzheng/open-dynamic-export"
@@ -12,43 +12,23 @@ boot: auto
 hassio_api: true
 hassio_role: default
 ingress: true
-ingress_port: 8099  # Changed from 0 to fixed port
+ingress_port: 8099
 panel_icon: mdi:solar-power
 panel_title: "Solar Export"
 ports:
   3000/tcp: null
-ports_description:
-  3000/tcp: "ODE API (internal only)"
 options:
   config_file: |
     {
       "setpoints": {},
-      "inverters": [
-        {
-          "type": "mqtt",
-          "host": "mqtt://core-mosquitto",
-          "username": "your_username",
-          "password": "your_password",
-          "topic": "inverters/1"
-        }
-      ],
+      "inverters": [],
       "inverterControl": {
         "enabled": false
       },
       "meter": {
         "type": "mqtt",
         "host": "mqtt://core-mosquitto",
-        "username": "your_username",
-        "password": "your_password",
         "topic": "site"
-      },
-      "publish": {
-        "mqtt": {
-          "host": "mqtt://core-mosquitto",
-          "username": "your_username",
-          "password": "your_password",
-          "topic": "ode/limits"
-        }
       }
     }
   log_level: info
