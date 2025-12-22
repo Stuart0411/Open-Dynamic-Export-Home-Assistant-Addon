@@ -2,13 +2,15 @@
 Dynamic solar export management with CSIP-AUS support for Home Assistant.
 This repository contains a Home Assistant add-on for [Open Dynamic Export](https://github.com/longzheng/open-dynamic-export).
 
+(This has been developed for MQTT, but should also work for other configurations supported by ODE)
+
 ## Installation
 
 1. **Add this repository to Home Assistant:**
    - Go to Settings → Add-ons → Add-on Store
    - Click the three dots (⋮) in the top right
    - Click "Repositories"
-   - Add this URL: `https://github.com/YOUR_USERNAME/ode-addon`
+   - Add this URL: `[https://github.com/Stuart0411/Open-Dynamic-Export-Home-Assistant-Addon]`
    - Click "Add"
 
 2. **Install the add-on:**
@@ -20,12 +22,6 @@ This repository contains a Home Assistant add-on for [Open Dynamic Export](https
    - Edit the `config_file` with your settings
    - Update MQTT credentials to match your Mosquitto setup
    - Save the configuration
-
-4. **Start the add-on:**
-   - Go to the Info tab
-   - Click "Start"
-   - Enable "Start on boot" if desired
-   - Click "Open Web UI" to access the dashboard
 
 ## Prerequisites
 
