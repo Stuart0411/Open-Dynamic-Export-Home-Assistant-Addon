@@ -33,6 +33,19 @@ This repository contains a Home Assistant add-on for [Open Dynamic Export](https
 The default open dynamic exports UI can be accessed locally from your home assistant IP address or homeassistant.local:3000
 eg. 192.168.1.5:3000
 
+## CSIP-AUS Setup (Optional)
+For CSIP-AUS dynamic export control:
+
+Get your certificates from your DNSP
+Place them in: /addon_configs/2b62df8a_open-dynamic-export/certs/
+
+sep2-cert.pem
+sep2-key.pem
+
+
+Update config with your CSIP credentials
+Restart the add-on
+
 ## Configuration Example
 
 ```json
@@ -76,18 +89,7 @@ eg. 192.168.1.5:3000
     }
   }
 }
-## CSIP-AUS Setup (Optional)
-For CSIP-AUS dynamic export control:
-
-Get your certificates from your DNSP
-Place them in: /addon_configs/2b62df8a_open-dynamic-export/certs/
-
-sep2-cert.pem
-sep2-key.pem
-
-
-Update config with your CSIP credentials
-Restart the add-on
+```
 ## Support
 
 For issues with Open Dynamic Export itself, see: https://github.com/longzheng/open-dynamic-export
