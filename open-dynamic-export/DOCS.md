@@ -48,7 +48,67 @@ Click **Start** and check the logs for any errors.
 
 ## CSIP-AUS Certificate Setup
 
-To enable CSIP-AUS dynamic export control, you need to provide your SEP2 certificates.
+CSIP-AUS uses a two-level PKI certificate hierarchy for authentication:
+
+1. **Manufacturer Certificate** - Signed by your utility's Smart Energy Root CA (SERCA)
+2. **Device Certificate** - Signed by your manufacturer certificate (this is what ODE uses)
+
+### Certificate Generation Process
+
+⚠️ **This process must be done BEFORE setting up the add-on**, as it requires running ODE's npm scripts locally.
+
+#### Prerequisites
+
+- Git installed on your computer
+- Node.js and npm installed
+- Access to your utility's CSIP-AUS onboarding portal
+- Your CSIP site ID and credentials
+
+#### Step 1: Clone ODE Repository Locally
+
+On your computer (not in Home Assistant):
+
+```bash
+git clone https://github.com/longzheng/open-dynamic-export.git
+cd open-dynamic-export
+npm install
+```
+
+#### Step 2: Generate Manufacturer Certificate
+
+```bash
+# Generate manufacturer private key
+openssl ecparam -name secp256r1 -genkey -noout -out mica_key.pem
+
+# Generate certificate signing request
+openssl req -new -key mica_key.pem -out mica_cert_req.csr -sha256 -subj "/"
+```
+
+**Submit `mica_cert_req.csr`** to your utility's CSIP onboarding portal and wait for the signed certificate (`mica_cert.pem`).
+
+⏳ This can take several days to weeks depending on your utility.
+
+#### Step 3: Generate Device Certificate
+
+Once you receive the signed manufacturer certificate:
+
+```bash
+# Generate device certificate request
+npm run cert:device-request
+
+# Sign it with your manufacturer certificate
+npm run cert:device-generate
+```
+
+This creates:
+- `key.pem` - Device private key
+- `cert.pem` - Device certificate
+
+#### Step 4: Copy Certificates to Add-on
+
+Now copy the **device** certificates to your Home Assistant add-on persistent storage.
+
+To enable CSIP-AUS dynamic export control, you need to provide your device SEP2 certificates.
 
 ### Method 1: File Editor (Easiest)
 
@@ -236,3 +296,4 @@ Logging verbosity: `trace`, `debug`, `info`, `warning`, `error`
 - **Home Assistant Community:** https://community.home-assistant.io/
 
 ---
+ Basic CSIP-AUS support
