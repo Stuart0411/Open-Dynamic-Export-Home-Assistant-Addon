@@ -9,18 +9,24 @@ RUN apk add --no-cache \
     bash \
     jq \
     make \
-    g++
+    g++ \
+    openssl
 
 # Build ODE
 WORKDIR /ode
 RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . && \
+    echo "[BUILD] ODE commit: $(git rev-parse --short HEAD)" && \
+    echo "[BUILD] Building ODE..." && \
     npm ci && \
-    npm run build
+    npm run build && \
+    echo "[BUILD] ODE built successfully"
 
 # Copy startup script
 COPY run.sh /
 RUN chmod a+x /run.sh
 
+# Expose port
 EXPOSE 3000
 
+# Run
 CMD ["/run.sh"]
