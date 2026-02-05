@@ -12,6 +12,8 @@ boot: auto
 hassio_api: true
 hassio_role: default
 webui: "http://[HOST]:[PORT:3000]"
+map:
+  - share:rw
 ports:
   3000/tcp: 3000
 ports_description:
