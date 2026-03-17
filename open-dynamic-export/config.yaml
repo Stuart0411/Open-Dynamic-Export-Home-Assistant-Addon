@@ -1,5 +1,5 @@
 name: "Open Dynamic Export"
-version: "2.4.0"
+version: "2.4.1"
 slug: "open-dynamic-export"
 description: "Dynamic solar export management with CSIP-AUS support"
 url: "https://github.com/longzheng/open-dynamic-export"
@@ -20,6 +20,8 @@ map:
   - config:rw
   - ssl:rw
 options:
+  sep2_cert_path: "ode/sep2-cert.pem"
+  sep2_key_path: "ode/sep2-key.pem"
   config_file: |
     {
       "setpoints": {},
@@ -53,5 +55,7 @@ options:
     }
   log_level: info
 schema:
+  sep2_cert_path: str?
+  sep2_key_path: str?
   config_file: str
   log_level: list(trace|debug|info|warning|error)?
