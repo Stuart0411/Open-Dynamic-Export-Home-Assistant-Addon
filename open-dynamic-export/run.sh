@@ -98,12 +98,57 @@ export LOG_LEVEL=$(cat /data/options.json | jq -r '.log_level // "info"')
 export CONFIG_PATH="/data/config.json"
 export SERVER_PORT="3000"
 export SERVER_HOST="0.0.0.0"
-export TZ="UTC"
+export TZ="Australia/Sydney"
 export CONFIG_DIR="/data"
 export SEP2_CERT_FILE="ode/config/sep2-cert.pem"
 export SEP2_KEY_FILE="ode/config/sep2-key.pem"
 export SEP2_PEN=$(cat /data/options.json | jq -r '.sep2_pen // "12345"')
 export NODE_EXTRA_CA_CERTS="${ODE_CONFIG_DIR}/serca.pem"
+
+# -------------------------------------------------------
+# InfluxDB (optional)
+# Set influxdb_enabled: true in the add-on configuration to
+# enable metric logging to an InfluxDB v2 instance.
+# -------------------------------------------------------
+INFLUXDB_ENABLED=$(cat /data/options.json | jq -r '.influxdb_enabled // false')
+ 
+echo "[INFO] =========================================="
+echo "[INFO] InfluxDB Configuration"
+echo "[INFO] =========================================="
+ 
+if [ "${INFLUXDB_ENABLED}" = "true" ]; then
+    INFLUXDB_URL=$(cat /data/options.json    | jq -r '.influxdb_url    // ""')
+    INFLUXDB_TOKEN=$(cat /data/options.json  | jq -r '.influxdb_token  // ""')
+    INFLUXDB_ORG=$(cat /data/options.json    | jq -r '.influxdb_org    // ""')
+    INFLUXDB_BUCKET=$(cat /data/options.json | jq -r '.influxdb_bucket // ""')
+ 
+    # Validate — all four fields are required when InfluxDB is enabled
+    INFLUXDB_VALID=true
+    [ -z "${INFLUXDB_URL}"    ] && echo "[ERROR] influxdb_url is required when influxdb_enabled is true"    && INFLUXDB_VALID=false
+    [ -z "${INFLUXDB_TOKEN}"  ] && echo "[ERROR] influxdb_token is required when influxdb_enabled is true"  && INFLUXDB_VALID=false
+    [ -z "${INFLUXDB_ORG}"    ] && echo "[ERROR] influxdb_org is required when influxdb_enabled is true"    && INFLUXDB_VALID=false
+    [ -z "${INFLUXDB_BUCKET}" ] && echo "[ERROR] influxdb_bucket is required when influxdb_enabled is true" && INFLUXDB_VALID=false
+ 
+    if [ "${INFLUXDB_VALID}" = "false" ]; then
+        echo "[ERROR] InfluxDB is enabled but one or more fields are missing."
+        echo "[ERROR] Fill in all InfluxDB fields on the add-on Configuration page, or set influxdb_enabled: false."
+        exit 1
+    fi
+ 
+    export INFLUXDB_URL
+    export INFLUXDB_TOKEN
+    export INFLUXDB_ORG
+    export INFLUXDB_BUCKET
+ 
+    echo "[INFO] InfluxDB logging : ENABLED"
+    echo "[INFO] INFLUXDB_URL     : ${INFLUXDB_URL}"
+    echo "[INFO] INFLUXDB_ORG     : ${INFLUXDB_ORG}"
+    echo "[INFO] INFLUXDB_BUCKET  : ${INFLUXDB_BUCKET}"
+    echo "[INFO] INFLUXDB_TOKEN   : (set, not shown)"
+else
+    echo "[INFO] InfluxDB logging : DISABLED"
+    echo "[INFO] Set influxdb_enabled: true on the Configuration page to enable."
+fi
 
 echo "[INFO] =========================================="
 echo "[INFO] Environment Configuration"

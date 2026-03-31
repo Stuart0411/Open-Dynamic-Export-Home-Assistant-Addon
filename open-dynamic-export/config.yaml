@@ -55,9 +55,19 @@ options:
       }
     }
   log_level: info
+  influxdb_enabled: false
+  influxdb_url: ""
+  influxdb_token: ""
+  influxdb_org: ""
+  influxdb_bucket: ""
 schema:
   sep2_cert_path: str?
   sep2_key_path: str?
   sep2_pen: str?
   config_file: str
   log_level: list(trace|debug|info|warning|error)?
+  influxdb_enabled: bool?
+  influxdb_url: str?
+  influxdb_token: str?
+  influxdb_org: str?
+  influxdb_bucket: str?

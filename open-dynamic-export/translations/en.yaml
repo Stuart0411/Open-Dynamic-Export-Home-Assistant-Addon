@@ -1,0 +1,63 @@
+configuration:
+  sep2_cert_path:
+    name: SEP2 Certificate Path
+    description: >-
+      Path to your SEP2 client certificate PEM file, relative to /homeassistant.
+      Default: ode/sep2-cert.pem (i.e. /homeassistant/ode/sep2-cert.pem).
+
+  sep2_key_path:
+    name: SEP2 Private Key Path
+    description: >-
+      Path to your SEP2 private key PEM file, relative to /homeassistant.
+      Default: ode/sep2-key.pem (i.e. /homeassistant/ode/sep2-key.pem).
+
+  sep2_pen:
+    name: SEP2 Private Enterprise Number (PEN)
+    description: >-
+      Your inverter vendor's IANA Private Enterprise Number.
+      Check with your DNSP or inverter manufacturer if unsure.
+
+  config_file:
+    name: ODE Configuration (JSON)
+    description: >-
+      Full contents of your ODE config.json. Configures inverters, meter,
+      setpoints, publish targets and more. See https://opendynamicexport.com/guide/
+
+  log_level:
+    name: Log Level
+    description: >-
+      Verbosity of add-on logs. Use 'info' for normal operation, 'debug' or
+      'trace' for troubleshooting, 'warning' or 'error' for quieter output.
+
+  influxdb_enabled:
+    name: Enable InfluxDB Logging
+    description: >-
+      When enabled, ODE will write metrics (power, export limits, setpoints)
+      to your InfluxDB v2 instance. All four InfluxDB fields below must be
+      filled in. Leave disabled if you do not use InfluxDB.
+
+  influxdb_url:
+    name: InfluxDB URL
+    description: >-
+      Full URL of your InfluxDB v2 instance including scheme and port.
+      Examples: http://192.168.1.100:8086  or  http://homeassistant.local:8086
+      Only required when Enable InfluxDB Logging is on.
+
+  influxdb_token:
+    name: InfluxDB API Token
+    description: >-
+      InfluxDB API token with write access to your target bucket.
+      Generate one in InfluxDB under Data → API Tokens → Generate API Token.
+      Only required when Enable InfluxDB Logging is on.
+
+  influxdb_org:
+    name: InfluxDB Organisation
+    description: >-
+      The name of your InfluxDB organisation (set during InfluxDB initial setup).
+      Only required when Enable InfluxDB Logging is on.
+
+  influxdb_bucket:
+    name: InfluxDB Bucket
+    description: >-
+      The InfluxDB bucket where ODE metrics will be written. Must already exist.
+      Only required when Enable InfluxDB Logging is on.
