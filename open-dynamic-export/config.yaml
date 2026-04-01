@@ -1,5 +1,5 @@
 name: "Open Dynamic Export"
-version: "2.4.4"
+version: "2.4.5-beta"
 slug: "open-dynamic-export"
 description: "Dynamic solar export management with CSIP-AUS support"
 url: "https://github.com/longzheng/open-dynamic-export"
@@ -67,6 +67,7 @@ options:
   influxdb_admin_token: ""
   influxdb_org: ""
   influxdb_bucket: ""
+  influxdb_db: ""
 schema:
   sep2_cert_path: str?
   sep2_key_path: str?
@@ -81,3 +82,4 @@ schema:
   influxdb_admin_token: str?
   influxdb_org: str?
   influxdb_bucket: str?
+  influxdb_db: str?
