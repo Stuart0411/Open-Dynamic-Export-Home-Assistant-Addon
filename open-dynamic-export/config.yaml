@@ -1,5 +1,5 @@
 name: "Open Dynamic Export"
-version: "2.4.5-beta"
+version: "2.4.2"
 slug: "open-dynamic-export"
 description: "Dynamic solar export management with CSIP-AUS support"
 url: "https://github.com/longzheng/open-dynamic-export"
@@ -55,31 +55,9 @@ options:
       }
     }
   log_level: info
-  # --- InfluxDB (optional) ---
-  # For the HA InfluxDB v1 add-on: set host, port, username, password.
-  # Leave influxdb_admin_token, influxdb_org, influxdb_bucket blank for v1.
-  # For InfluxDB v2: fill in all fields.
-  influxdb_enabled: false
-  influxdb_host: ""
-  influxdb_port: 8086
-  influxdb_username: ""
-  influxdb_password: ""
-  influxdb_admin_token: ""
-  influxdb_org: ""
-  influxdb_bucket: ""
-  influxdb_db: ""
 schema:
   sep2_cert_path: str?
   sep2_key_path: str?
   sep2_pen: str?
   config_file: str
   log_level: list(trace|debug|info|warning|error)?
-  influxdb_enabled: bool?
-  influxdb_host: str?
-  influxdb_port: int?
-  influxdb_username: str?
-  influxdb_password: str?
-  influxdb_admin_token: str?
-  influxdb_org: str?
-  influxdb_bucket: str?
-  influxdb_db: str?
