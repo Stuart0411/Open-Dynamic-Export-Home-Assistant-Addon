@@ -42,7 +42,7 @@ configuration:
     description: >-
       Hostname or IP address of your InfluxDB instance.
       For the HA InfluxDB add-on (v1), find the IP in Settings → System → Network,
-      or use the add-on's internal hostname shown in its Info tab (e.g. "influxdb").
+      or use the add-on's internal hostname shown in its Info tab (e.g. "a0d7b954-influxdb").
       Only required when Enable InfluxDB Logging is on.
 
   influxdb_port:
@@ -83,3 +83,8 @@ configuration:
     description: >-
       Your InfluxDB v2 bucket name. Not used by InfluxDB v1 (which uses databases).
       Leave blank if using the HA InfluxDB v1 add-on.
+
+  influx_db:
+    name: InfluxDB Database (v1 only)
+    description: >-
+      Your InfluxDB v1 database name. Leave blank if using InfluxDB v2.
