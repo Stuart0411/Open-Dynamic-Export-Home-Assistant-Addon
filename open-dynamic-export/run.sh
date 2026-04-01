@@ -2,7 +2,7 @@
 set -e
 
 echo "[INFO] =========================================="
-echo "[INFO] Open Dynamic Export Add-on v2.4.4"
+echo "[INFO] Open Dynamic Export Add-on v2.4.5-beta"
 echo "[INFO] =========================================="
 
 # Create data directory
@@ -132,11 +132,12 @@ if [ "${INFLUXDB_ENABLED}" = "true" ]; then
     INFLUXDB_ADMIN_TOKEN=$(cat /data/options.json | jq -r '.influxdb_admin_token // ""')
     INFLUXDB_ORG=$(cat /data/options.json      | jq -r '.influxdb_org           // ""')
     INFLUXDB_BUCKET=$(cat /data/options.json   | jq -r '.influxdb_bucket        // ""')
+    INFLUXDB_DB=$(cat /data/options.json       | jq -r '.influxdb_db            // ""')    
 
     # host is always required
     if [ -z "${INFLUXDB_HOST}" ]; then
         echo "[ERROR] influxdb_host is required when influxdb_enabled is true."
-        echo "[ERROR] For the HA InfluxDB add-on, use its IP address or hostname."
+        echo "[ERROR] For the HA InfluxDB add-on, use its IP address or hostname (e.g. a0d7b954-influxdb)."
         exit 1
     fi
 
@@ -165,6 +166,7 @@ if [ "${INFLUXDB_ENABLED}" = "true" ]; then
     export INFLUXDB_ADMIN_TOKEN
     export INFLUXDB_ORG
     export INFLUXDB_BUCKET
+    export INFLUXDB_DB
 
     echo "[INFO] InfluxDB logging    : ENABLED"
     echo "[INFO] INFLUXDB_HOST       : ${INFLUXDB_HOST}"
@@ -174,6 +176,7 @@ if [ "${INFLUXDB_ENABLED}" = "true" ]; then
     echo "[INFO] INFLUXDB_ADMIN_TOKEN: $([ -n "${INFLUXDB_ADMIN_TOKEN}" ] && echo "(set, not shown)" || echo "(not set)")"
     echo "[INFO] INFLUXDB_ORG        : ${INFLUXDB_ORG}"
     echo "[INFO] INFLUXDB_BUCKET     : ${INFLUXDB_BUCKET}"
+    echo "[INFO] INFLUXDB_DB         : ${INFLUXDB_DB}"
 else
     echo "[INFO] InfluxDB logging    : DISABLED"
     echo "[INFO] Set influxdb_enabled: true on the Configuration page to enable."
