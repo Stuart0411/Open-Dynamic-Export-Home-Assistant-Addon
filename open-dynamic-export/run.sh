@@ -2,7 +2,7 @@
 set -e
 
 echo "[INFO] =========================================="
-echo "[INFO] Open Dynamic Export Add-on v2.4.2"
+echo "[INFO] Open Dynamic Export Add-on v2.4.4"
 echo "[INFO] =========================================="
 
 # Create data directory
@@ -98,7 +98,7 @@ export LOG_LEVEL=$(cat /data/options.json | jq -r '.log_level // "info"')
 export CONFIG_PATH="/data/config.json"
 export SERVER_PORT="3000"
 export SERVER_HOST="0.0.0.0"
-export TZ="Australia/Sydney"
+export TZ="UTC"
 export CONFIG_DIR="/data"
 export SEP2_CERT_FILE="ode/config/sep2-cert.pem"
 export SEP2_KEY_FILE="ode/config/sep2-key.pem"
@@ -107,46 +107,75 @@ export NODE_EXTRA_CA_CERTS="${ODE_CONFIG_DIR}/serca.pem"
 
 # -------------------------------------------------------
 # InfluxDB (optional)
-# Set influxdb_enabled: true in the add-on configuration to
-# enable metric logging to an InfluxDB v2 instance.
+# -------------------------------------------------------
+# The HA InfluxDB v1 add-on uses username/password auth.
+# Set influxdb_host, influxdb_port, influxdb_username, influxdb_password.
+# Leave influxdb_admin_token, influxdb_org, influxdb_bucket blank for v1.
+#
+# InfluxDB v2 users: fill in all fields including token, org, and bucket.
+#
+# ODE reads these exact env var names from its environment:
+#   INFLUXDB_HOST, INFLUXDB_PORT, INFLUXDB_USERNAME, INFLUXDB_PASSWORD,
+#   INFLUXDB_ADMIN_TOKEN, INFLUXDB_ORG, INFLUXDB_BUCKET
 # -------------------------------------------------------
 INFLUXDB_ENABLED=$(cat /data/options.json | jq -r '.influxdb_enabled // false')
- 
+
 echo "[INFO] =========================================="
 echo "[INFO] InfluxDB Configuration"
 echo "[INFO] =========================================="
- 
+
 if [ "${INFLUXDB_ENABLED}" = "true" ]; then
-    INFLUXDB_URL=$(cat /data/options.json    | jq -r '.influxdb_url    // ""')
-    INFLUXDB_TOKEN=$(cat /data/options.json  | jq -r '.influxdb_token  // ""')
-    INFLUXDB_ORG=$(cat /data/options.json    | jq -r '.influxdb_org    // ""')
-    INFLUXDB_BUCKET=$(cat /data/options.json | jq -r '.influxdb_bucket // ""')
- 
-    # Validate — all four fields are required when InfluxDB is enabled
-    INFLUXDB_VALID=true
-    [ -z "${INFLUXDB_URL}"    ] && echo "[ERROR] influxdb_url is required when influxdb_enabled is true"    && INFLUXDB_VALID=false
-    [ -z "${INFLUXDB_TOKEN}"  ] && echo "[ERROR] influxdb_token is required when influxdb_enabled is true"  && INFLUXDB_VALID=false
-    [ -z "${INFLUXDB_ORG}"    ] && echo "[ERROR] influxdb_org is required when influxdb_enabled is true"    && INFLUXDB_VALID=false
-    [ -z "${INFLUXDB_BUCKET}" ] && echo "[ERROR] influxdb_bucket is required when influxdb_enabled is true" && INFLUXDB_VALID=false
- 
-    if [ "${INFLUXDB_VALID}" = "false" ]; then
-        echo "[ERROR] InfluxDB is enabled but one or more fields are missing."
-        echo "[ERROR] Fill in all InfluxDB fields on the add-on Configuration page, or set influxdb_enabled: false."
+    INFLUXDB_HOST=$(cat /data/options.json     | jq -r '.influxdb_host          // ""')
+    INFLUXDB_PORT=$(cat /data/options.json     | jq -r '.influxdb_port          // "8086"')
+    INFLUXDB_USERNAME=$(cat /data/options.json | jq -r '.influxdb_username      // ""')
+    INFLUXDB_PASSWORD=$(cat /data/options.json | jq -r '.influxdb_password      // ""')
+    INFLUXDB_ADMIN_TOKEN=$(cat /data/options.json | jq -r '.influxdb_admin_token // ""')
+    INFLUXDB_ORG=$(cat /data/options.json      | jq -r '.influxdb_org           // ""')
+    INFLUXDB_BUCKET=$(cat /data/options.json   | jq -r '.influxdb_bucket        // ""')
+
+    # host is always required
+    if [ -z "${INFLUXDB_HOST}" ]; then
+        echo "[ERROR] influxdb_host is required when influxdb_enabled is true."
+        echo "[ERROR] For the HA InfluxDB add-on, use its IP address or hostname."
         exit 1
     fi
- 
-    export INFLUXDB_URL
-    export INFLUXDB_TOKEN
+
+    # Determine auth mode and validate accordingly
+    if [ -n "${INFLUXDB_ADMIN_TOKEN}" ]; then
+        # Token auth (InfluxDB v2)
+        echo "[INFO] InfluxDB auth mode  : token (v2)"
+        if [ -z "${INFLUXDB_ORG}" ] || [ -z "${INFLUXDB_BUCKET}" ]; then
+            echo "[ERROR] influxdb_org and influxdb_bucket are required when using token auth."
+            exit 1
+        fi
+    else
+        # Username/password auth (InfluxDB v1 — HA add-on default)
+        echo "[INFO] InfluxDB auth mode  : username/password (v1)"
+        if [ -z "${INFLUXDB_USERNAME}" ] || [ -z "${INFLUXDB_PASSWORD}" ]; then
+            echo "[ERROR] influxdb_username and influxdb_password are required when not using a token."
+            echo "[ERROR] Find these in the HA InfluxDB add-on configuration."
+            exit 1
+        fi
+    fi
+
+    export INFLUXDB_HOST
+    export INFLUXDB_PORT
+    export INFLUXDB_USERNAME
+    export INFLUXDB_PASSWORD
+    export INFLUXDB_ADMIN_TOKEN
     export INFLUXDB_ORG
     export INFLUXDB_BUCKET
- 
-    echo "[INFO] InfluxDB logging : ENABLED"
-    echo "[INFO] INFLUXDB_URL     : ${INFLUXDB_URL}"
-    echo "[INFO] INFLUXDB_ORG     : ${INFLUXDB_ORG}"
-    echo "[INFO] INFLUXDB_BUCKET  : ${INFLUXDB_BUCKET}"
-    echo "[INFO] INFLUXDB_TOKEN   : (set, not shown)"
+
+    echo "[INFO] InfluxDB logging    : ENABLED"
+    echo "[INFO] INFLUXDB_HOST       : ${INFLUXDB_HOST}"
+    echo "[INFO] INFLUXDB_PORT       : ${INFLUXDB_PORT}"
+    echo "[INFO] INFLUXDB_USERNAME   : ${INFLUXDB_USERNAME}"
+    echo "[INFO] INFLUXDB_PASSWORD   : (set, not shown)"
+    echo "[INFO] INFLUXDB_ADMIN_TOKEN: $([ -n "${INFLUXDB_ADMIN_TOKEN}" ] && echo "(set, not shown)" || echo "(not set)")"
+    echo "[INFO] INFLUXDB_ORG        : ${INFLUXDB_ORG}"
+    echo "[INFO] INFLUXDB_BUCKET     : ${INFLUXDB_BUCKET}"
 else
-    echo "[INFO] InfluxDB logging : DISABLED"
+    echo "[INFO] InfluxDB logging    : DISABLED"
     echo "[INFO] Set influxdb_enabled: true on the Configuration page to enable."
 fi
 
