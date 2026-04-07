@@ -29,9 +29,10 @@ RUN grep -q "base: './'" vite.config.ts \
     || sed -i "s/defineConfig({/defineConfig({\n  base: '.\/\',/" vite.config.ts \
     && echo "[BUILD] Patched vite.config.ts with base: ./"
 
-RUN echo "[BUILD] Building ODE..." && \
-    npm install --legacy-peer-deps && \
-    npm run build && \
+RUN npm install -g pnpm && \
+    echo "[BUILD] Building ODE..." && \
+    pnpm install --no-frozen-lockfile && \
+    pnpm run build && \
     echo "[BUILD] ODE built successfully"
 
 # nginx ingress config template — INGRESS_PATH is substituted at startup
