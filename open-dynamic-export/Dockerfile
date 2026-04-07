@@ -30,7 +30,7 @@ RUN grep -q "base: './'" vite.config.ts \
     && echo "[BUILD] Patched vite.config.ts with base: ./"
 
 RUN echo "[BUILD] Building ODE..." && \
-    npm ci && \
+    npm install && \
     npm run build && \
     echo "[BUILD] ODE built successfully"
 
