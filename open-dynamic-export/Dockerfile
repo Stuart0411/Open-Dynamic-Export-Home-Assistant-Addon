@@ -21,8 +21,8 @@ WORKDIR /ode
 RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . && \
     echo "[BUILD] ODE commit: $(git rev-parse --short HEAD)"
 
-# Enable pnpm via corepack (matches how ODE's own Dockerfile works)
-RUN corepack enable
+# Install pnpm (corepack is not available in Alpine's nodejs package)
+RUN npm install -g pnpm
 
 # Patch vite.config.ts to use a relative base path so Vite emits
 # ./assets/... instead of /assets/... in index.html.
