@@ -129,9 +129,12 @@ echo "[INFO] ✓ nginx started (PID ${NGINX_PID})"
 echo "[INFO] =========================================="
 echo "[INFO] Starting ODE Backend"
 echo "[INFO] =========================================="
-cd /ode
 
 # If nginx exits unexpectedly, kill ODE too (and vice versa)
 trap 'kill ${NGINX_PID} 2>/dev/null; exit' TERM INT
 
-exec node dist/src/app.js
+# Entry point confirmed from ODE's package.json: "start": "NODE_ENV=production node dist/app.js"
+# Server TS (tsconfig.server.json) compiles src/ → dist/, so src/app.ts → dist/app.js
+# Vite UI build outputs to dist/ui/ (separate from server output)
+export NODE_ENV=production
+exec node dist/app.js
