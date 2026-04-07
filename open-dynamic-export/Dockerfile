@@ -25,20 +25,9 @@ RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . &
 # This makes Vite emit ./assets/... instead of /assets/... in index.html,
 # which allows the <base> tag injected by nginx at runtime to resolve
 # assets correctly regardless of the ingress sub-path HA assigns.
-RUN node -e "
-const fs = require('fs');
-let cfg = fs.readFileSync('vite.config.ts', 'utf8');
-if (!cfg.includes(\"base: './'\")) {
-  cfg = cfg.replace(
-    /defineConfig\(\s*\{/,
-    \"defineConfig({\n  base: './',\"
-  );
-  fs.writeFileSync('vite.config.ts', cfg);
-  console.log('[BUILD] Patched vite.config.ts with base: ./');
-} else {
-  console.log('[BUILD] vite.config.ts already has relative base');
-}
-"
+RUN grep -q "base: './'" vite.config.ts \
+    || sed -i "s/defineConfig({/defineConfig({\n  base: '.\/\',/" vite.config.ts \
+    && echo "[BUILD] Patched vite.config.ts with base: ./"
 
 RUN echo "[BUILD] Building ODE..." && \
     npm ci && \
