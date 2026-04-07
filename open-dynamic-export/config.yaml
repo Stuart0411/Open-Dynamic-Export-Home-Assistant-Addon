@@ -1,5 +1,5 @@
 name: "Open Dynamic Export"
-version: "2.4.2"
+version: "2.4.3-beta"
 slug: "open-dynamic-export"
 description: "Dynamic solar export management with CSIP-AUS support"
 url: "https://github.com/longzheng/open-dynamic-export"
@@ -11,11 +11,11 @@ startup: application
 boot: auto
 hassio_api: true
 hassio_role: default
-webui: "http://[HOST]:[PORT:3000]"
-ports:
-  3000/tcp: 3000
-ports_description:
-  3000/tcp: "ODE Web Interface"
+
+# --- Ingress (replaces the old direct-port webui) ---
+ingress: true
+ingress_port: 8099
+
 map:
   - config:rw
   - ssl:rw
