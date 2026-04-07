@@ -53,39 +53,13 @@ if [ -f "${SEP2_CA_SRC}" ]; then
 fi
 
 # -------------------------------------------------------
-# Ingress path resolution
+# nginx ingress config
 # -------------------------------------------------------
-# Ask the HA Supervisor for the ingress entry path for this addon.
-# This is the URL prefix HA uses to proxy requests to us, e.g.
-#   /api/hassio_ingress/abc123def456
-# We bake this into the nginx config so it can inject the correct
-# <base href="..."> into every index.html response.
-echo "[INFO] =========================================="
-echo "[INFO] Resolving Ingress Path"
-echo "[INFO] =========================================="
-
-INGRESS_PATH=""
-if SUPERVISOR_RESPONSE=$(curl -sf \
-        -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
-        "http://supervisor/addons/self/info" 2>/dev/null); then
-    INGRESS_PATH=$(echo "${SUPERVISOR_RESPONSE}" | jq -r '.data.ingress_entry // ""')
-    echo "[INFO] Ingress path from Supervisor: ${INGRESS_PATH}"
-else
-    echo "[WARNING] Could not reach Supervisor API — ingress <base> tag will be empty"
-    echo "[WARNING] Direct port access may still work; ingress UI may not load assets correctly"
-fi
-
-# Export for envsubst
-export INGRESS_PATH
-
-# Generate the nginx config from the template, substituting the real ingress path
-envsubst '${INGRESS_PATH}' \
-    < /etc/nginx/ingress.conf.template \
-    > /etc/nginx/http.d/ingress.conf
-
-echo "[INFO] nginx config written with INGRESS_PATH=${INGRESS_PATH}"
-echo "[INFO] Generated nginx config:"
-cat /etc/nginx/http.d/ingress.conf
+# HA sends X-Ingress-Path with every request. The nginx config template
+# references $http_x_ingress_path directly, so no substitution is needed
+# at startup — just copy the template into place.
+cp /etc/nginx/ingress.conf.template /etc/nginx/http.d/ingress.conf
+echo "[INFO] nginx ingress config installed"
 
 # -------------------------------------------------------
 # Environment for ODE
