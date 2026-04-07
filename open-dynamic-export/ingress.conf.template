@@ -6,17 +6,18 @@ server {
     allow 172.30.32.2;
     deny all;
 
-    # Disable gzip — sub_filter cannot modify compressed responses
+    # Disable gzip so sub_filter can modify the HTML
     gzip off;
 
-    # sub_filter applies to text/html by default — no need to declare it
-    # (declaring it causes a duplicate MIME type warning)
     sub_filter_once on;
 
-    # HA sends X-Ingress-Path with every request (e.g. /api/hassio_ingress/abc123)
-    # nginx exposes this as $http_x_ingress_path — use it directly in the replacement
-    # so we don't need to call the Supervisor API at startup.
-    sub_filter '<head>' '<head><base href="$http_x_ingress_path/">';
+    # Inject two things into <head>:
+    # 1. <base> tag — makes relative asset paths (./assets/...) resolve correctly
+    #    under the ingress sub-path.
+    # 2. Inline script — strips the ingress prefix from window.location.pathname
+    #    before TanStack Router initialises, so route matching works correctly.
+    #    Without this the router sees /api/hassio_ingress/<token>/ and shows "Not Found".
+    sub_filter '<head>' '<head><base href="$http_x_ingress_path/"><script>(function(){var p="$http_x_ingress_path";if(p&&location.pathname.startsWith(p)){history.replaceState(null,"",location.pathname.slice(p.length)||"/");}})();</script>';
 
     location / {
         proxy_pass         http://127.0.0.1:3000;
