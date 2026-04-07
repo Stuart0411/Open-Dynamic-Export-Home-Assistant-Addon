@@ -84,6 +84,8 @@ envsubst '${INGRESS_PATH}' \
     > /etc/nginx/http.d/ingress.conf
 
 echo "[INFO] nginx config written with INGRESS_PATH=${INGRESS_PATH}"
+echo "[INFO] Generated nginx config:"
+cat /etc/nginx/http.d/ingress.conf
 
 # -------------------------------------------------------
 # Environment for ODE
