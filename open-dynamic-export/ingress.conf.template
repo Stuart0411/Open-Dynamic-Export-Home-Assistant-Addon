@@ -2,36 +2,41 @@ server {
     listen 8099;
     server_name _;
 
-    # Only accept connections from the HA Supervisor ingress proxy
     allow 172.30.32.2;
     deny all;
 
-    # Disable gzip so sub_filter can modify the HTML
     gzip off;
-
     sub_filter_once on;
 
-    # Inject two things into <head>:
-    # 1. <base> tag — makes relative asset paths (./assets/...) resolve correctly
-    #    under the ingress sub-path.
-    # 2. Inline script — strips the ingress prefix from window.location.pathname
-    #    before TanStack Router initialises, so route matching works correctly.
-    #    Without this the router sees /api/hassio_ingress/<token>/ and shows "Not Found".
-    sub_filter '<head>' '<head><base href="$http_x_ingress_path/"><script>(function(){var p="$http_x_ingress_path";if(p&&location.pathname.startsWith(p)){history.replaceState(null,"",location.pathname.slice(p.length)||"/");}})();</script>';
+    # Inject a script that fixes two ingress problems at runtime:
+    #
+    # 1. ROUTER FIX: TanStack Router reads window.location.pathname, which the
+    #    browser sees as the full ingress path e.g. /api/hassio_ingress/<token>/.
+    #    history.replaceState rewrites it to / before React initialises so the
+    #    router matches routes correctly.
+    #
+    # 2. API FIX: ODE's openapi-fetch client uses baseUrl:'/' so it makes calls
+    #    to /api/readings etc. Under ingress these must go to
+    #    /api/hassio_ingress/<token>/api/readings. We wrap window.fetch to
+    #    prepend the ingress path to any same-origin request that doesn't
+    #    already include it.
+    #
+    # $http_x_ingress_path is the X-Ingress-Path header HA sends with every
+    # request, e.g. /api/hassio_ingress/abc123. nginx substitutes it here
+    # per-request before sending the response to the browser.
+
+    sub_filter '<head>' '<head><script>(function(){var ig="$http_x_ingress_path";if(!ig)return;if(location.pathname.startsWith(ig)){history.replaceState(null,"",location.pathname.slice(ig.length)||"/");}var _f=window.fetch;window.fetch=function(input,init){if(typeof input==="string"){if(input.startsWith("/")&&!input.startsWith(ig)){input=ig+input;}else if(input.startsWith(location.origin+"/")&&!input.startsWith(location.origin+ig)){input=location.origin+ig+input.slice(location.origin.length);}}return _f.apply(this,arguments);};})();</script>';
 
     location / {
         proxy_pass         http://127.0.0.1:3000;
         proxy_http_version 1.1;
 
-        # Disable upstream compression so sub_filter can read the HTML
         proxy_set_header   Accept-Encoding   "";
-
         proxy_set_header   Host              $host;
         proxy_set_header   X-Real-IP         $remote_addr;
         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header   X-Ingress-Path    $http_x_ingress_path;
 
-        # WebSocket support
         proxy_set_header   Upgrade           $http_upgrade;
         proxy_set_header   Connection        "upgrade";
 
