@@ -24,6 +24,14 @@ RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . &
 # Install pnpm (corepack is not available in Alpine's nodejs package)
 RUN npm install -g pnpm
 
+# Patch vite.config.ts to use base: './' so Vite emits relative asset paths
+# (./assets/main.js instead of /assets/main.js). Combined with the <base> tag
+# nginx injects per-request, assets resolve correctly under the ingress sub-path.
+# ViteExpress ignores vite.config.ts at runtime but this patch applies at build
+# time when `pnpm run build` calls `vite build` directly.
+RUN grep -q "base: './'" vite.config.ts \
+    || sed -i "s/defineConfig({/defineConfig({\n    base: '.\/',/" vite.config.ts \
+    && echo "[BUILD] Patched vite.config.ts with base: ./"
 
 RUN echo "[BUILD] Installing dependencies..." && \
     pnpm install --no-frozen-lockfile && \
