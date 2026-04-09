@@ -1,5 +1,5 @@
 name: "Open Dynamic Export"
-version: "2.4.3-beta-ingress-7"
+version: "2.4.3-beta-ingress-8"
 slug: "open-dynamic-export"
 description: "Dynamic solar export management with CSIP-AUS support"
 url: "https://github.com/longzheng/open-dynamic-export"
@@ -15,6 +15,12 @@ hassio_role: default
 # --- Ingress (replaces the old direct-port webui) ---
 ingress: true
 ingress_port: 8099
+
+# Temporary: expose port 3000 for debugging - remove when done
+ports:
+  3000/tcp: 3000
+ports_description:
+  3000/tcp: "ODE API (debug)"
 
 map:
   - config:rw
