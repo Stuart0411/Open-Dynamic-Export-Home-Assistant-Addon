@@ -8,30 +8,23 @@ server {
     gzip off;
     sub_filter_once on;
 
-    # Inject a script that fixes two ingress problems at runtime:
-    #
-    # 1. ROUTER FIX: TanStack Router reads window.location.pathname, which the
-    #    browser sees as the full ingress path e.g. /api/hassio_ingress/<token>/.
-    #    history.replaceState rewrites it to / before React initialises so the
-    #    router matches routes correctly.
-    #
-    # 2. API FIX: ODE's openapi-fetch client uses baseUrl:'/' so it makes calls
-    #    to /api/readings etc. Under ingress these must go to
-    #    /api/hassio_ingress/<token>/api/readings. We wrap window.fetch to
-    #    prepend the ingress path to any same-origin request that doesn't
-    #    already include it.
-    #
-    # $http_x_ingress_path is the X-Ingress-Path header HA sends with every
-    # request, e.g. /api/hassio_ingress/abc123. nginx substitutes it here
-    # per-request before sending the response to the browser.
-
-    sub_filter '<head>' '<head><script>(function(){var ig="$http_x_ingress_path";if(!ig)return;if(location.pathname.startsWith(ig)){history.replaceState(null,"",location.pathname.slice(ig.length)||"/");}var _f=window.fetch;window.fetch=function(input,init){if(typeof input==="string"){if(input.startsWith("/")&&!input.startsWith(ig)){input=ig+input;}else if(input.startsWith(location.origin+"/")&&!input.startsWith(location.origin+ig)){input=location.origin+ig+input.slice(location.origin.length);}}return _f.apply(this,arguments);};})();</script>';
+    # Inject into every HTML response:
+    # 1. <base> tag — makes relative asset paths (./assets/...) from the vite
+    #    base:'./' patch resolve correctly under the ingress sub-path.
+    # 2. Inline script that runs before React:
+    #    a) Router fix — strips ingress prefix from window.location.pathname so
+    #       TanStack Router matches routes correctly instead of showing "Not Found"
+    #    b) Fetch interceptor — prepends ingress path to same-origin API calls so
+    #       ODE's openapi-fetch (baseUrl:'/') reaches ODE not HA's own API
+    sub_filter '<head>' '<head><base href="$http_x_ingress_path/"><script>(function(){var ig="$http_x_ingress_path";if(!ig)return;if(location.pathname.startsWith(ig)){history.replaceState(null,"",location.pathname.slice(ig.length)||"/");}var _f=window.fetch;window.fetch=function(input,init){if(typeof input==="string"&&input.startsWith("/")&&!input.startsWith(ig)){input=ig+input;}return _f.call(this,input,init);};})();</script>';
 
     location / {
         proxy_pass         http://127.0.0.1:3000;
         proxy_http_version 1.1;
 
+        # Disable upstream compression so sub_filter can read the HTML
         proxy_set_header   Accept-Encoding   "";
+
         proxy_set_header   Host              $host;
         proxy_set_header   X-Real-IP         $remote_addr;
         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
