@@ -2,7 +2,7 @@
 set -e
 
 echo "[INFO] =========================================="
-echo "[INFO] Open Dynamic Export Add-on v2.4.3-beta"
+echo "[INFO] Open Dynamic Export Add-on v2.4.2"
 echo "[INFO] =========================================="
 
 # Create data directory
@@ -52,14 +52,9 @@ if [ -f "${SEP2_CA_SRC}" ]; then
     echo "[INFO] ✓ CA certificate copied"
 fi
 
-# -------------------------------------------------------
-# nginx ingress config
-# -------------------------------------------------------
-# HA sends X-Ingress-Path with every request. The nginx config template
-# references $http_x_ingress_path directly, so no substitution is needed
-# at startup — just copy the template into place.
-cp /etc/nginx/ingress.conf.template /etc/nginx/http.d/ingress.conf
-echo "[INFO] nginx ingress config installed"
+# nginx ingress config is baked directly into /etc/nginx/http.d/ingress.conf
+# at Docker build time — nothing to do here at startup.
+echo "[INFO] nginx ingress config ready"
 
 # -------------------------------------------------------
 # Environment for ODE
