@@ -1,7 +1,7 @@
 ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest
 FROM ${BUILD_FROM}
 
-# Install Node.js, nginx, gettext (for envsubst), and build tools
+# Install Node.js, nginx, and build tools
 RUN apk add --no-cache \
     nodejs \
     npm \
@@ -11,8 +11,7 @@ RUN apk add --no-cache \
     make \
     g++ \
     openssl \
-    nginx \
-    gettext
+    nginx
 
 # -------------------------------------------------------
 # Build ODE
@@ -25,10 +24,6 @@ RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . &
 RUN npm install -g pnpm
 
 # Patch vite.config.ts to use base: './' so Vite emits relative asset paths
-# (./assets/main.js instead of /assets/main.js). Combined with the <base> tag
-# nginx injects per-request, assets resolve correctly under the ingress sub-path.
-# ViteExpress ignores vite.config.ts at runtime but this patch applies at build
-# time when `pnpm run build` calls `vite build` directly.
 RUN grep -q "base: './'" vite.config.ts \
     || sed -i "s/defineConfig({/defineConfig({\n    base: '.\/',/" vite.config.ts \
     && echo "[BUILD] Patched vite.config.ts with base: ./"
@@ -39,14 +34,19 @@ RUN echo "[BUILD] Installing dependencies..." && \
     pnpm run build && \
     echo "[BUILD] ODE built successfully"
 
-# nginx ingress config template — INGRESS_PATH substituted at startup
+# Patch dist/ui/index.html with ingress compatibility script at build time.
+# This is more reliable than nginx sub_filter which silently fails on chunked
+# or compressed HTTP responses. The script self-detects the ingress path from
+# window.location.pathname at runtime so no nginx magic is needed.
+COPY patch-index.js /ode/patch-index.js
+RUN node /ode/patch-index.js
+
+# nginx ingress proxy config (simple reverse proxy, no sub_filter needed)
 COPY ingress.conf.template /etc/nginx/ingress.conf.template
 
 # Startup script
 COPY run.sh /
 RUN chmod a+x /run.sh
 
-# Ingress port — HA Supervisor connects here
 EXPOSE 8099
-
 CMD ["/run.sh"]
