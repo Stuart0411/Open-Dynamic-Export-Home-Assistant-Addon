@@ -1,7 +1,6 @@
 ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest
 FROM ${BUILD_FROM}
 
-# Install Node.js, nginx, and build tools
 RUN apk add --no-cache \
     nodejs \
     npm \
@@ -13,38 +12,28 @@ RUN apk add --no-cache \
     openssl \
     nginx
 
-# -------------------------------------------------------
-# Build ODE
-# -------------------------------------------------------
 WORKDIR /ode
+
 RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . && \
     echo "[BUILD] ODE commit: $(git rev-parse --short HEAD)"
 
-# Install pnpm (corepack is not available in Alpine's nodejs package)
 RUN npm install -g pnpm
 
-# Patch vite.config.ts to use base: './' so Vite emits relative asset paths
+# Patch vite.config.ts AND build in the same RUN layer so they cannot be
+# cached independently — the patch must always precede the build.
 RUN grep -q "base: './'" vite.config.ts \
-    || sed -i "s/defineConfig({/defineConfig({\n    base: '.\/',/" vite.config.ts \
-    && echo "[BUILD] Patched vite.config.ts with base: ./"
-
-RUN echo "[BUILD] Installing dependencies..." && \
-    pnpm install --no-frozen-lockfile && \
-    echo "[BUILD] Building ODE..." && \
-    pnpm run build && \
-    echo "[BUILD] ODE built successfully"
+        || sed -i "s/defineConfig({/defineConfig({\n    base: '.\/',/" vite.config.ts \
+    && echo "[BUILD] Patched vite.config.ts with base: ./" \
+    && pnpm install --no-frozen-lockfile \
+    && pnpm run build \
+    && echo "[BUILD] Build complete"
 
 # Patch dist/ui/index.html with ingress compatibility script at build time.
-# This is more reliable than nginx sub_filter which silently fails on chunked
-# or compressed HTTP responses. The script self-detects the ingress path from
-# window.location.pathname at runtime so no nginx magic is needed.
-COPY patch-index.cjs /ode/patch-index.cjs
-RUN node /ode/patch-index.cjs
+# Uses .cjs extension so Node treats it as CommonJS (ODE package.json has "type":"module").
+COPY patch-index.cjs /patch-index.cjs
+RUN node /patch-index.cjs
 
-# nginx ingress proxy config (simple reverse proxy, no sub_filter needed)
 COPY ingress.conf.template /etc/nginx/ingress.conf.template
-
-# Startup script
 COPY run.sh /
 RUN chmod a+x /run.sh
 
