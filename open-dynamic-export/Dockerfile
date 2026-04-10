@@ -38,7 +38,7 @@ RUN echo "[BUILD] Installing dependencies..." && \
 # This is more reliable than nginx sub_filter which silently fails on chunked
 # or compressed HTTP responses. The script self-detects the ingress path from
 # window.location.pathname at runtime so no nginx magic is needed.
-COPY patch-index.cjs /ode/patch-index.js
+COPY patch-index.cjs /ode/patch-index.cjs
 RUN node /ode/patch-index.cjs
 
 # nginx ingress proxy config (simple reverse proxy, no sub_filter needed)
