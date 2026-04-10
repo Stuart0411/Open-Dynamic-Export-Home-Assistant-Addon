@@ -19,21 +19,15 @@ RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . &
 
 RUN npm install -g pnpm
 
-# Patch vite.config.ts AND build in the same RUN layer so they cannot be
-# cached independently — the patch must always precede the build.
-RUN grep -q "base: './'" vite.config.ts \
-        || sed -i "s/defineConfig({/defineConfig({\n    base: '.\/',/" vite.config.ts \
-    && echo "[BUILD] Patched vite.config.ts with base: ./" \
-    && pnpm install --no-frozen-lockfile \
-    && pnpm run build \
-    && echo "[BUILD] Build complete"
+RUN pnpm install --no-frozen-lockfile && \
+    pnpm run build && \
+    echo "[BUILD] ODE built successfully"
 
-# Patch dist/ui/index.html with ingress compatibility script at build time.
-# Uses .cjs extension so Node treats it as CommonJS (ODE package.json has "type":"module").
-COPY patch-index.cjs /patch-index.cjs
-RUN node /patch-index.cjs
+# nginx serves static UI files directly from dist/ui/ on port 8099.
+# API calls (/api/*) are proxied to ODE's Node.js server on port 3000.
+# This avoids all sub_filter/base-tag complexity and works with Nabu Casa.
+COPY ingress.conf.template /etc/nginx/http.d/ingress.conf
 
-COPY ingress.conf.template /etc/nginx/ingress.conf.template
 COPY run.sh /
 RUN chmod a+x /run.sh
 
