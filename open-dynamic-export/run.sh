@@ -83,6 +83,13 @@ echo "[INFO] SEP2_PEN:     ${SEP2_PEN}"
 echo "[INFO] =========================================="
 echo "[INFO] Starting nginx (ingress on :8099)"
 echo "[INFO] =========================================="
+echo "[INFO] nginx configs in http.d/:"
+ls -la /etc/nginx/http.d/ 2>/dev/null || echo "[INFO] (none)"
+echo "[INFO] UI dist files:"
+ls /ode/dist/ui/ 2>/dev/null || echo "[ERROR] /ode/dist/ui/ not found!"
+echo "[INFO] UI assets:"
+ls /ode/dist/ui/assets/ 2>/dev/null | head -5 || echo "[ERROR] No assets found"
+nginx -t 2>&1 && echo "[INFO] nginx config OK"
 nginx -g "daemon off;" &
 NGINX_PID=$!
 
