@@ -23,9 +23,10 @@ RUN pnpm install --no-frozen-lockfile && \
     pnpm run build && \
     echo "[BUILD] ODE built successfully"
 
-# nginx serves static UI files directly from dist/ui/ on port 8099.
-# API calls (/api/*) are proxied to ODE's Node.js server on port 3000.
-# This avoids all sub_filter/base-tag complexity and works with Nabu Casa.
+# Remove any default nginx configs that might intercept our requests
+RUN rm -f /etc/nginx/http.d/default.conf /etc/nginx/conf.d/default.conf
+
+# Our nginx config — serves static UI files directly, proxies /api/* to ODE
 COPY ingress.conf.template /etc/nginx/http.d/ingress.conf
 
 COPY run.sh /
