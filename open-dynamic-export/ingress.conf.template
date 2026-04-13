@@ -2,23 +2,22 @@ server {
     listen 8099;
     server_name _;
 
-    # Only accept connections from the HA Supervisor ingress proxy
     allow 172.30.32.2;
     deny all;
 
-    # Serve static UI files directly from the built Vite output.
-    # This means /assets/main.js is served by nginx on port 8099,
-    # which IS the ingress endpoint — so absolute asset paths work
-    # regardless of whether the browser is on local HA or Nabu Casa.
     root /ode/dist/ui;
 
-    # Static assets (JS, CSS, images) — serve directly with long cache
+    # Ensure correct MIME types are loaded
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    # Static assets — serve directly with long cache
     location /assets/ {
         try_files $uri =404;
         add_header Cache-Control "public, max-age=31536000, immutable";
     }
 
-    # ODE backend API — proxy to Node.js server
+    # ODE backend API
     location /api/ {
         proxy_pass         http://127.0.0.1:3000;
         proxy_http_version 1.1;
@@ -32,9 +31,9 @@ server {
         proxy_read_timeout 300s;
     }
 
-    # SPA fallback — serve index.html for all other routes so
-    # TanStack Router can handle client-side navigation
+    # SPA fallback — always serve index.html, never cache it
     location / {
         try_files $uri /index.html;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
     }
 }
