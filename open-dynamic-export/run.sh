@@ -137,13 +137,10 @@ echo "[INFO] SEP2_PEN:     ${SEP2_PEN}"
 echo "[INFO] =========================================="
 echo "[INFO] Starting nginx (ingress on :8099)"
 echo "[INFO] =========================================="
-echo "[INFO] nginx configs in http.d/:"
-ls -la /etc/nginx/http.d/ 2>/dev/null || echo "[INFO] (none)"
-echo "[INFO] UI dist files:"
-ls /ode/dist/ui/ 2>/dev/null || echo "[ERROR] /ode/dist/ui/ not found!"
-echo "[INFO] UI assets:"
-ls /ode/dist/ui/assets/ 2>/dev/null | head -5 || echo "[ERROR] No assets found"
-nginx -t 2>&1 && echo "[INFO] nginx config OK"
+echo "[INFO] mime.types exists: $(ls /etc/nginx/mime.types 2>/dev/null && echo YES || echo NO)"
+echo "[INFO] index.html asset refs:"
+grep -o 'src="[^"]*"' /ode/dist/ui/index.html 2>/dev/null | head -5
+grep -o 'href="[^"]*"' /ode/dist/ui/index.html 2>/dev/null | head -5
 nginx -g "daemon off;" &
 NGINX_PID=$!
 
