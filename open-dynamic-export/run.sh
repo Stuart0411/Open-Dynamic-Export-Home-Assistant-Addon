@@ -78,16 +78,11 @@ http {
         allow 172.30.32.2;
         deny all;
 
-        root /ode/dist/ui;
-
-        # Static assets — served directly by nginx
-        location /assets/ {
-            try_files $uri =404;
-            add_header Cache-Control "public, max-age=31536000, immutable";
-        }
-
-        # ODE backend API — proxied to Node.js
-        location /api/ {
+        # Proxy everything to ViteExpress on port 3000.
+        # ViteExpress serves the patched index.html and all assets with
+        # correct MIME types. The fetch interceptor patched into index.html
+        # at build time handles API path rewriting and router fix at runtime.
+        location / {
             proxy_pass         http://127.0.0.1:3000;
             proxy_http_version 1.1;
             proxy_set_header   Host              $host;
@@ -98,12 +93,6 @@ http {
             proxy_set_header   Connection        "upgrade";
             proxy_buffering    off;
             proxy_read_timeout 300s;
-        }
-
-        # SPA fallback
-        location / {
-            try_files $uri /index.html;
-            add_header Cache-Control "no-cache, no-store, must-revalidate";
         }
     }
 }
