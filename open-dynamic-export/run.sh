@@ -52,46 +52,63 @@ if [ -f "${SEP2_CA_SRC}" ]; then
     echo "[INFO] ✓ CA certificate copied"
 fi
 
-# Write nginx config at startup (not baked in) so config changes only
-# need an addon restart, not a full Docker rebuild.
-cat > /etc/nginx/http.d/ingress.conf << 'NGINXEOF'
-server {
-    listen 8099;
-    server_name _;
+# Write a complete nginx.conf that includes mime.types at the http level.
+# The HA base image's default nginx.conf may not include mime.types, causing
+# all files to be served as text/plain regardless of extension.
+cat > /etc/nginx/nginx.conf << 'NGINXEOF'
+worker_processes auto;
+pid /var/run/nginx/nginx.pid;
 
-    allow 172.30.32.2;
-    deny all;
+events {
+    worker_connections 1024;
+}
 
-    root /ode/dist/ui;
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+    sendfile      on;
+    keepalive_timeout 65;
+    access_log    /dev/stdout;
+    error_log     /dev/stderr warn;
 
-    # Static assets — served directly by nginx with correct MIME types
-    location /assets/ {
-        try_files $uri =404;
-        add_header Cache-Control "public, max-age=31536000, immutable";
-    }
+    server {
+        listen 8099;
+        server_name _;
 
-    # ODE backend API — proxied to Node.js server
-    location /api/ {
-        proxy_pass         http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header   Host              $host;
-        proxy_set_header   X-Real-IP         $remote_addr;
-        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header   X-Ingress-Path    $http_x_ingress_path;
-        proxy_set_header   Upgrade           $http_upgrade;
-        proxy_set_header   Connection        "upgrade";
-        proxy_buffering    off;
-        proxy_read_timeout 300s;
-    }
+        allow 172.30.32.2;
+        deny all;
 
-    # SPA fallback — serve index.html, never cache it
-    location / {
-        try_files $uri /index.html;
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        root /ode/dist/ui;
+
+        # Static assets — served directly by nginx
+        location /assets/ {
+            try_files $uri =404;
+            add_header Cache-Control "public, max-age=31536000, immutable";
+        }
+
+        # ODE backend API — proxied to Node.js
+        location /api/ {
+            proxy_pass         http://127.0.0.1:3000;
+            proxy_http_version 1.1;
+            proxy_set_header   Host              $host;
+            proxy_set_header   X-Real-IP         $remote_addr;
+            proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header   X-Ingress-Path    $http_x_ingress_path;
+            proxy_set_header   Upgrade           $http_upgrade;
+            proxy_set_header   Connection        "upgrade";
+            proxy_buffering    off;
+            proxy_read_timeout 300s;
+        }
+
+        # SPA fallback
+        location / {
+            try_files $uri /index.html;
+            add_header Cache-Control "no-cache, no-store, must-revalidate";
+        }
     }
 }
 NGINXEOF
-echo "[INFO] nginx config written"
+echo "[INFO] nginx.conf written"
 
 # -------------------------------------------------------
 # Environment for ODE
