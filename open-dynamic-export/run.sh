@@ -120,4 +120,4 @@ echo "[INFO] Starting ODE Backend"
 echo "[INFO] =========================================="
 
 cd /ode
-exec node dist/src/app.js
+exec pnpm start
