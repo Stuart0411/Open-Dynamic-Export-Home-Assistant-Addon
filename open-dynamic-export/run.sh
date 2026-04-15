@@ -78,10 +78,9 @@ http {
         allow 172.30.32.2;
         deny all;
 
-        # Proxy everything to ViteExpress on port 3000.
-        # ViteExpress serves the patched index.html and all assets with
-        # correct MIME types. The fetch interceptor patched into index.html
-        # at build time handles API path rewriting and router fix at runtime.
+        # Custom header so browser DevTools shows nginx handled the request
+        add_header X-ODE-Served-By "ode-nginx-8099" always;
+
         location / {
             proxy_pass         http://127.0.0.1:3000;
             proxy_http_version 1.1;
