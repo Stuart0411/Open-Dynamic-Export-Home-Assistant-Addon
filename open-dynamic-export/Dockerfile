@@ -17,7 +17,7 @@ WORKDIR /ode
 RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . && \
     echo "[BUILD] ODE commit: $(git rev-parse --short HEAD)" && \
     echo "[BUILD] Building ODE..." && \
-    npm ci && \
+    npm install && \
     npm run build && \
     echo "[BUILD] ODE built successfully"
 
