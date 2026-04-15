@@ -10,15 +10,19 @@ RUN apk add --no-cache \
     jq \
     make \
     g++ \
-    openssl
+    openssl \
+    python3
+
+# Install PNPM
+RUN npm install -g pnpm
 
 # Build ODE
 WORKDIR /ode
 RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . && \
     echo "[BUILD] ODE commit: $(git rev-parse --short HEAD)" && \
+    pnpm install --no-frozen-lockfile && \
     echo "[BUILD] Building ODE..." && \
-    npm install && \
-    npm run build && \
+    pnpm run build && \
     echo "[BUILD] ODE built successfully"
 
 # Copy startup script
