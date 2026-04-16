@@ -14,13 +14,13 @@ hassio_role: default
 
 # --- Ingress (replaces the old direct-port webui) ---
 ingress: true
-ingress_port: 8099
+ingress_port: 3000
 
 # Temporary: expose port 3000 for debugging - remove when done
-ports:
-  3000/tcp: 3000
-ports_description:
-  3000/tcp: "ODE API (debug)"
+# ports:
+#   3000/tcp: 3000
+# ports_description:
+#   3000/tcp: "ODE API (debug)"
 
 map:
   - config:rw
