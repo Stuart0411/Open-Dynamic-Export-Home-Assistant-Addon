@@ -15,9 +15,13 @@ RUN apk add --no-cache \
 RUN npm install -g pnpm
 
 WORKDIR /ode
+
+# 1) Clone upstream
 RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . && \
-    echo "[BUILD] ODE commit: $(git rev-parse --short HEAD)" && \
-    echo "[BUILD] Patching Vite base for HA ingress (base: ./)..." && \
+    echo "[BUILD] ODE commit: $(git rev-parse --short HEAD)"
+
+# 2) Patch Vite base for ingress-safe relative assets
+RUN echo "[BUILD] Patching Vite base for HA ingress (base: ./)..." && \
     python3 - <<'PY'
 from pathlib import Path
 
@@ -35,12 +39,13 @@ if "base:" not in s:
 else:
     print("[BUILD] vite.config.ts already has base:, skipping")
 PY
-    && echo "[BUILD] Installing deps (pnpm)..." \
-    && pnpm install --no-frozen-lockfile \
-    && echo "[BUILD] Building..." \
-    && pnpm run build \
-    && echo "[BUILD] Build complete"
 
+# 3) Install + build
+RUN echo "[BUILD] Installing deps (pnpm)..." && \
+    pnpm install --no-frozen-lockfile && \
+    echo "[BUILD] Building..." && \
+    pnpm run build && \
+    echo "[BUILD] Build complete"
 
 COPY run.sh /
 RUN chmod a+x /run.sh
