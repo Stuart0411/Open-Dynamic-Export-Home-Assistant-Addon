@@ -40,7 +40,11 @@ else:
     print("[BUILD] vite.config.ts already has base:, skipping")
 PY
 
-# 3) Install + build
+# 3) Fix absolute API paths in UI code (if any)
+RUN echo "[BUILD] Fixing absolute API paths for ingress..." && \
+    sed -i 's|"/api/| "api/|g' src/ui/**/*.ts src/ui/**/*.tsx || true
+
+# 4) Install + build
 RUN echo "[BUILD] Installing deps (pnpm)..." && \
     pnpm install --no-frozen-lockfile && \
     echo "[BUILD] Building..." && \
