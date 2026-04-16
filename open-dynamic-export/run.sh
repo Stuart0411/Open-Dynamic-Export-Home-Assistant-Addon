@@ -1,123 +1,101 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 echo "[INFO] =========================================="
-echo "[INFO] Open Dynamic Export Add-on v2.4.2"
+echo "[INFO] Open Dynamic Export (HA Add-on)"
 echo "[INFO] =========================================="
 
-# Create data directory
 mkdir -p /data
 
-# Write config file
-CONFIG=$(cat /data/options.json | jq -r '.config_file')
-echo "${CONFIG}" > /data/config.json
+# ---------------------------
+# Write config.json from add-on options
+# ---------------------------
+CONFIG_JSON="$(jq -r '.config_file // empty' /data/options.json)"
+
+if [ -z "${CONFIG_JSON}" ] || [ "${CONFIG_JSON}" = "null" ]; then
+  echo "[ERROR] config_file option is empty. Please set config_file in the add-on configuration."
+  exit 1
+fi
+
+echo "${CONFIG_JSON}" > /data/config.json
 echo "[INFO] Configuration written to /data/config.json"
 
-# -------------------------------------------------------
-# Certificate Setup
-# -------------------------------------------------------
-# ODE resolves cert paths as: CONFIG_DIR + "/" + SEP2_CERT_FILE
-# So SEP2_CERT_FILE must be RELATIVE (no leading /data/).
-# We copy user-supplied certs from /config (= /homeassistant
-# in File Editor) into /data/ode/config/ so ODE can find them.
-# -------------------------------------------------------
+# ---------------------------
+# Certificate handling (optional)
+# ---------------------------
+# User-provided paths are relative to /config (HA /homeassistant)
+SEP2_CERT_REL="$(jq -r '.sep2_cert_path // "ode/sep2-cert.pem"' /data/options.json)"
+SEP2_KEY_REL="$(jq -r '.sep2_key_path  // "ode/sep2-key.pem"' /data/options.json)"
 
-# Read user-configured paths from addon options (relative to /config)
-SEP2_CERT_REL=$(cat /data/options.json | jq -r '.sep2_cert_path // "ode/sep2-cert.pem"')
-SEP2_KEY_REL=$(cat /data/options.json  | jq -r '.sep2_key_path  // "ode/sep2-key.pem"')
-
-# Strip any accidental leading slash
 SEP2_CERT_REL="${SEP2_CERT_REL#/}"
 SEP2_KEY_REL="${SEP2_KEY_REL#/}"
 
-# Full source paths (from the HA config folder)
 SEP2_CERT_SRC="/config/${SEP2_CERT_REL}"
 SEP2_KEY_SRC="/config/${SEP2_KEY_REL}"
-
-# CA cert — server root CA (fixed name, must be in /homeassistant/ode/)
 SEP2_CA_SRC="/config/ode/serca.pem"
 
-# Destination: /data/ode/config/ — ODE prepends /data/ to the relative env vars below
-ODE_CONFIG_DIR="/data/ode/config"
-mkdir -p "${ODE_CONFIG_DIR}"
+ODE_CERT_DIR="/data/ode/config"
+mkdir -p "${ODE_CERT_DIR}"
 
 echo "[INFO] =========================================="
 echo "[INFO] Certificate Setup"
 echo "[INFO] =========================================="
-echo "[INFO] Looking for cert  : ${SEP2_CERT_SRC}"
-echo "[INFO] Looking for key   : ${SEP2_KEY_SRC}"
-echo "[INFO] Looking for CA    : ${SEP2_CA_SRC}"
-echo "[INFO] ODE config dir    : ${ODE_CONFIG_DIR}"
+echo "[INFO] Looking for cert: ${SEP2_CERT_SRC}"
+echo "[INFO] Looking for key : ${SEP2_KEY_SRC}"
+echo "[INFO] Looking for CA  : ${SEP2_CA_SRC}"
+echo "[INFO] Dest dir        : ${ODE_CERT_DIR}"
 
 if [ -f "${SEP2_CERT_SRC}" ] && [ -f "${SEP2_KEY_SRC}" ]; then
-    echo "[INFO] ✓ Found SEP2 certificates"
-    cp "${SEP2_CERT_SRC}" "${ODE_CONFIG_DIR}/sep2-cert.pem"
-    cp "${SEP2_KEY_SRC}"  "${ODE_CONFIG_DIR}/sep2-key.pem"
-    echo "[INFO] ✓ Certificates copied to ${ODE_CONFIG_DIR}"
-
-    echo "[INFO] Certificate details:"
-    openssl x509 -in "${ODE_CONFIG_DIR}/sep2-cert.pem" -noout -subject -dates 2>/dev/null \
-        || echo "[WARNING] Unable to parse certificate — check the file is a valid PEM"
+  cp "${SEP2_CERT_SRC}" "${ODE_CERT_DIR}/sep2-cert.pem"
+  cp "${SEP2_KEY_SRC}"  "${ODE_CERT_DIR}/sep2-key.pem"
+  echo "[INFO] ✓ SEP2 cert/key copied into ${ODE_CERT_DIR}"
+  # Best-effort print certificate info
+  openssl x509 -in "${ODE_CERT_DIR}/sep2-cert.pem" -noout -subject -dates 2>/dev/null || true
 else
-    echo "[WARNING] ⚠ SEP2 certificates not found!"
-    echo "[WARNING] Place your certificates at (using File Editor or SSH):"
-    echo "[WARNING]   /homeassistant/${SEP2_CERT_REL}  (rename from fullchain.pem)"
-    echo "[WARNING]   /homeassistant/${SEP2_KEY_REL}   (rename from key.pem)"
-    echo "[WARNING] Or change the paths on the add-on Configuration page."
-
-    # Fallback: legacy /data/certs location from older installs
-    if [ -f "/data/certs/sep2-cert.pem" ] && [ -f "/data/certs/sep2-key.pem" ]; then
-        echo "[INFO] Found legacy certs in /data/certs — using as fallback"
-        cp "/data/certs/sep2-cert.pem" "${ODE_CONFIG_DIR}/sep2-cert.pem"
-        cp "/data/certs/sep2-key.pem"  "${ODE_CONFIG_DIR}/sep2-key.pem"
-    else
-        echo "# Placeholder — replace with real cert" > "${ODE_CONFIG_DIR}/sep2-cert.pem"
-        echo "# Placeholder — replace with real key"  > "${ODE_CONFIG_DIR}/sep2-key.pem"
-        echo "[INFO] Created placeholder certificate files"
-    fi
+  echo "[WARNING] ⚠ SEP2 cert/key not found. CSIP-AUS features may not work until certs are provided."
 fi
 
-# Copy server CA certificate if present
 if [ -f "${SEP2_CA_SRC}" ]; then
-    cp "${SEP2_CA_SRC}" "${ODE_CONFIG_DIR}/serca.pem"
-    echo "[INFO] ✓ CA certificate (serca.pem) copied to ${ODE_CONFIG_DIR}"
+  cp "${SEP2_CA_SRC}" "${ODE_CERT_DIR}/serca.pem"
+  echo "[INFO] ✓ CA certificate copied to ${ODE_CERT_DIR}/serca.pem"
 else
-    echo "[WARNING] serca.pem not found at ${SEP2_CA_SRC}"
-    echo "[WARNING] TLS verification of the server may fail."
-    echo "[WARNING] Place serca.pem in /homeassistant/ode/"
+  echo "[WARNING] serca.pem not found (optional, but recommended for TLS validation)."
 fi
 
-# -------------------------------------------------------
-# Environment
-# NOTE: SEP2_CERT_FILE and SEP2_KEY_FILE must be RELATIVE.
-# ODE prepends CONFIG_DIR (/data) to these paths internally.
-# NODE_EXTRA_CA_CERTS tells Node.js to trust the server CA.
-# SEP2_PEN is your inverter vendor's IANA Private Enterprise Number.
-# -------------------------------------------------------
-export LOG_LEVEL=$(cat /data/options.json | jq -r '.log_level // "info"')
+# ---------------------------
+# Environment for ODE
+# ---------------------------
+
+export TZ="$(jq -r '.tz // "Australia/Sydney"' /data/options.json)"
+
+export LOG_LEVEL="$(jq -r '.log_level // "info"' /data/options.json)"
 export CONFIG_PATH="/data/config.json"
-export SERVER_PORT="3000"
-export SERVER_HOST="0.0.0.0"
-export TZ="UTC"
 export CONFIG_DIR="/data"
+
+export SERVER_HOST="0.0.0.0"
+export SERVER_PORT="3000"
+
 export SEP2_CERT_FILE="ode/config/sep2-cert.pem"
 export SEP2_KEY_FILE="ode/config/sep2-key.pem"
-export SEP2_PEN=$(cat /data/options.json | jq -r '.sep2_pen // "12345"')
-export NODE_EXTRA_CA_CERTS="${ODE_CONFIG_DIR}/serca.pem"
+export SEP2_PEN="$(jq -r '.sep2_pen // "12345"' /data/options.json)"
+
+# Trust the SERCA CA if present
+if [ -f "${ODE_CERT_DIR}/serca.pem" ]; then
+  export NODE_EXTRA_CA_CERTS="${ODE_CERT_DIR}/serca.pem"
+fi
+
+export NODE_ENV=production
 
 echo "[INFO] =========================================="
-echo "[INFO] Environment Configuration"
+echo "[INFO] Environment"
 echo "[INFO] =========================================="
-echo "[INFO] LOG_LEVEL:              ${LOG_LEVEL}"
-echo "[INFO] CONFIG_PATH:            ${CONFIG_PATH}"
-echo "[INFO] SEP2_CERT_FILE:         ${CONFIG_DIR}/${SEP2_CERT_FILE}  (resolved by ODE)"
-echo "[INFO] SEP2_KEY_FILE:          ${CONFIG_DIR}/${SEP2_KEY_FILE}   (resolved by ODE)"
-echo "[INFO] SEP2_PEN:               ${SEP2_PEN}"
-echo "[INFO] NODE_EXTRA_CA_CERTS:    ${NODE_EXTRA_CA_CERTS}"
-echo "[INFO] SERVER_HOST:PORT:       ${SERVER_HOST}:${SERVER_PORT}"
-echo "[INFO] =========================================="
-echo "[INFO] Starting ODE Backend"
-echo "[INFO] =========================================="
+echo "[INFO] LOG_LEVEL         : ${LOG_LEVEL}"
+echo "[INFO] CONFIG_PATH       : ${CONFIG_PATH}"
+echo "[INFO] SERVER            : ${SERVER_HOST}:${SERVER_PORT}"
+echo "[INFO] SEP2_CERT_FILE    : ${SEP2_CERT_FILE}"
+echo "[INFO] SEP2_KEY_FILE     : ${SEP2_KEY_FILE}"
+echo "[INFO] SEP2_PEN          : ${SEP2_PEN}"
+echo "[INFO] NODE_EXTRA_CA_CERTS: ${NODE_EXTRA_CA_CERTS:-<not set>}"
 
 cd /ode
 exec pnpm start
