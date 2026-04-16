@@ -1,7 +1,6 @@
 ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest
 FROM ${BUILD_FROM}
 
-# Install dependencies needed to build ODE (and native node modules if any)
 RUN apk add --no-cache \
     nodejs \
     npm \
@@ -13,28 +12,35 @@ RUN apk add --no-cache \
     openssl \
     python3
 
-# Install pnpm (upstream uses pnpm)
 RUN npm install -g pnpm
 
 WORKDIR /ode
-
-# Clone upstream ODE (main), patch Vite base for ingress-safe relative assets, then build
 RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . && \
     echo "[BUILD] ODE commit: $(git rev-parse --short HEAD)" && \
-    echo "[BUILD] Patching Vite base for Home Assistant ingress (base: ./)..." && \
-    # Insert `base: "./",` right after `defineConfig({` if not already present
-    grep -q "base: ['./\"]\\./" vite.config.ts || \
-      sed -i 's/defineConfig({/defineConfig({\\n  base: \"\\.\\/\",/' vite.config.ts && \
-    echo "[BUILD] Installing deps (pnpm)..." && \
-    pnpm install --no-frozen-lockfile && \
-    echo "[BUILD] Building..." && \
-    pnpm run build && \
-    echo "[BUILD] Build complete"
+    echo "[BUILD] Patching Vite base for HA ingress (base: ./)..." && \
+    python3 - <<'PY' \
+from pathlib import Path \
+p = Path("vite.config.ts") \
+s = p.read_text(encoding="utf-8") \
+if "base:" not in s: \
+    needle = "defineConfig({" \
+    if needle in s: \
+        s = s.replace(needle, needle + "\n  base: './',", 1) \
+        p.write_text(s, encoding="utf-8") \
+        print("[BUILD] Patched vite.config.ts (inserted base: './')") \
+    else: \
+        raise SystemExit("[BUILD] ERROR: defineConfig({ not found in vite.config.ts") \
+else: \
+    print("[BUILD] vite.config.ts already has base:, skipping") \
+PY \
+    && echo "[BUILD] Installing deps (pnpm)..." \
+    && pnpm install --no-frozen-lockfile \
+    && echo "[BUILD] Building..." \
+    && pnpm run build \
+    && echo "[BUILD] Build complete"
 
-# Copy startup script
 COPY run.sh /
 RUN chmod a+x /run.sh
 
 EXPOSE 3000
-
 CMD ["/run.sh"]
