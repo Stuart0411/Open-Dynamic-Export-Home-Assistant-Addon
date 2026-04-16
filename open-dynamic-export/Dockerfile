@@ -20,7 +20,7 @@ WORKDIR /ode
 RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . && \
     echo "[BUILD] ODE commit: $(git rev-parse --short HEAD)"
 
-# 2) Patch Vite base for ingress-safe relative assets
+# 2) Patch Vite base so asset URLs are relative (ingress-safe)
 RUN echo "[BUILD] Patching Vite base for HA ingress (base: ./)..." && \
     python3 - <<'PY'
 from pathlib import Path
@@ -40,16 +40,22 @@ else:
     print("[BUILD] vite.config.ts already has base:, skipping")
 PY
 
-# 3) Fix absolute API paths in UI code (if any)
-RUN echo "[BUILD] Fixing absolute API paths for ingress..." && \
-    sed -i 's|"/api/| "api/|g' src/ui/**/*.ts src/ui/**/*.tsx || true
-
-# 4) Install + build
+# 3) Install + build
 RUN echo "[BUILD] Installing deps (pnpm)..." && \
     pnpm install --no-frozen-lockfile && \
     echo "[BUILD] Building..." && \
     pnpm run build && \
     echo "[BUILD] Build complete"
+
+# 4) Patch built UI bundles: make API calls relative (ingress-safe)
+#    This fixes calls like "/api/coordinator/status" escaping out of ingress.
+RUN echo "[BUILD] Patching built UI bundles to avoid absolute /api/ paths..." && \
+    (grep -R "api/coordinator/status" -n dist/ui/assets || true) && \
+    find dist/ui/assets -type f -name "*.js" -print0 | xargs -0 sed -i \
+      -e 's|"\/api\/|"api\/|g' \
+      -e "s|'\/api\/|'api\/|g" \
+      -e 's|`\/api\/|`api\/|g' \
+    && echo "[BUILD] UI bundle patch complete"
 
 COPY run.sh /
 RUN chmod a+x /run.sh
