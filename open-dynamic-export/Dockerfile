@@ -20,7 +20,7 @@ WORKDIR /ode
 RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . && \
     echo "[BUILD] ODE commit: $(git rev-parse --short HEAD)"
 
-# 2) Patch Vite base so asset URLs are relative (ingress-safe)
+# 2) Patch Vite base so asset URLs are relative
 RUN echo "[BUILD] Patching Vite base for HA ingress (base: ./)..." && \
     python3 - <<'PY'
 from pathlib import Path
@@ -47,8 +47,7 @@ RUN echo "[BUILD] Installing deps (pnpm)..." && \
     pnpm run build && \
     echo "[BUILD] Build complete"
 
-# 4) Patch built UI bundles: make API calls relative (ingress-safe)
-#    This fixes calls like "/api/coordinator/status" escaping out of ingress.
+# 4) Patch built UI bundles: make API calls relative
 RUN echo "[BUILD] Patching built UI bundles to avoid absolute /api/ paths..." && \
     (grep -R "api/coordinator/status" -n dist/ui/assets || true) && \
     find dist/ui/assets -type f -name "*.js" -print0 | xargs -0 sed -i \
