@@ -29,6 +29,7 @@ options:
   sep2_cert_path: "ode/sep2-cert.pem"
   sep2_key_path: "ode/sep2-key.pem"
   sep2_pen: "12345"
+  tz: "Australia/Sydney"
   config_file: |
     {
       "setpoints": {},
@@ -65,5 +66,6 @@ schema:
   sep2_cert_path: str?
   sep2_key_path: str?
   sep2_pen: str?
+  tz: str?
   config_file: str
   log_level: list(trace|debug|info|warning|error)?

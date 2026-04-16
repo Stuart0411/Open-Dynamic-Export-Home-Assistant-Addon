@@ -70,6 +70,9 @@ fi
 # ---------------------------
 # Environment for ODE
 # ---------------------------
+
+export TZ="$(jq -r '.tz // "Australia/Sydney"' /data/options.json)"
+
 export LOG_LEVEL="$(jq -r '.log_level // "info"' /data/options.json)"
 export CONFIG_PATH="/data/config.json"
 export CONFIG_DIR="/data"
