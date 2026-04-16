@@ -5,7 +5,6 @@ echo "[INFO] =========================================="
 echo "[INFO] Open Dynamic Export (HA Add-on)"
 echo "[INFO] =========================================="
 
-# Ensure data directory exists
 mkdir -p /data
 
 # ---------------------------
@@ -28,7 +27,6 @@ echo "[INFO] Configuration written to /data/config.json"
 SEP2_CERT_REL="$(jq -r '.sep2_cert_path // "ode/sep2-cert.pem"' /data/options.json)"
 SEP2_KEY_REL="$(jq -r '.sep2_key_path  // "ode/sep2-key.pem"' /data/options.json)"
 
-# Strip leading slashes if user entered absolute-ish paths
 SEP2_CERT_REL="${SEP2_CERT_REL#/}"
 SEP2_KEY_REL="${SEP2_KEY_REL#/}"
 
@@ -36,9 +34,6 @@ SEP2_CERT_SRC="/config/${SEP2_CERT_REL}"
 SEP2_KEY_SRC="/config/${SEP2_KEY_REL}"
 SEP2_CA_SRC="/config/ode/serca.pem"
 
-# ODE expects cert/key relative to CONFIG_DIR (/data) when using these env vars:
-# SEP2_CERT_FILE=ode/config/sep2-cert.pem
-# SEP2_KEY_FILE=ode/config/sep2-key.pem
 ODE_CERT_DIR="/data/ode/config"
 mkdir -p "${ODE_CERT_DIR}"
 
@@ -77,7 +72,6 @@ export LOG_LEVEL="$(jq -r '.log_level // "info"' /data/options.json)"
 export CONFIG_PATH="/data/config.json"
 export CONFIG_DIR="/data"
 
-# Ingress: ODE must bind to all interfaces inside container
 export SERVER_HOST="0.0.0.0"
 export SERVER_PORT="3000"
 
@@ -103,8 +97,5 @@ echo "[INFO] SEP2_KEY_FILE     : ${SEP2_KEY_FILE}"
 echo "[INFO] SEP2_PEN          : ${SEP2_PEN}"
 echo "[INFO] NODE_EXTRA_CA_CERTS: ${NODE_EXTRA_CA_CERTS:-<not set>}"
 
-# ---------------------------
-# Start ODE (use upstream start script)
-# ---------------------------
 cd /ode
 exec pnpm start
