@@ -24,7 +24,7 @@ RUN npm install -g pnpm
 # Relative paths resolve correctly from the ingress URL in the browser.
 # Absolute /assets/... would resolve to the HA/Nabu Casa root and 404.
 RUN grep -q "base: './'" vite.config.ts \
-        || sed -i "s/defineConfig({/defineConfig({\n    base: '.\/',/" vite.config.ts \
+        || sed -i "s/defineConfig({/defineConfig({\n  base: "\\.\\/\\/",/' vite.config.ts \
     && echo "[BUILD] Patched vite.config.ts with base: ./" \
     && pnpm install --no-frozen-lockfile \
     && pnpm run build \
