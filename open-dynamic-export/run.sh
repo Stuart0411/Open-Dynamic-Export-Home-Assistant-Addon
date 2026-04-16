@@ -80,6 +80,9 @@ http {
 
         # Custom header so browser DevTools shows nginx handled the request
         add_header X-ODE-Served-By "ode-nginx-8099" always;
+        # Prevent HA's service worker from caching our responses
+        add_header Cache-Control "no-store" always;
+        add_header Service-Worker-Allowed "/" always;
 
         location / {
             proxy_pass         http://127.0.0.1:3000;
@@ -154,4 +157,6 @@ trap 'kill ${NGINX_PID} 2>/dev/null; exit' TERM INT
 # Server TS (tsconfig.server.json) compiles src/ → dist/, so src/app.ts → dist/app.js
 # Vite UI build outputs to dist/ui/ (separate from server output)
 export NODE_ENV=production
-exec node dist/app.js
+
+cd /ode
+exec pnpm start
