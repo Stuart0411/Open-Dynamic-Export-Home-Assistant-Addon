@@ -17,7 +17,7 @@ RUN npm install -g pnpm
 WORKDIR /ode
 
 # 1) Clone upstream
-RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . && \
+RUN git clone --depth --branch patch-1 https://github.com/Stuart0411/open-dynamic-export.git . && \
     echo "[BUILD] ODE commit: $(git rev-parse --short HEAD)"
 
 # 2) Patch Vite base so asset URLs are relative
