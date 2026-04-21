@@ -71,36 +71,31 @@ if marker not in html:
 
 snippet = r"""
 <script>
+// SPA route fix for Home Assistant ingress: redirect root/unknown to Home
 (() => {
-  // Detect Home Assistant ingress base, e.g. /api/hassio_ingress/<token>
-  const m = window.location.pathname.match(/^(\/api\/hassio_ingress\/[^/]+)/);
-  const ingressBase = m ? m[1] : "";
-
-  const origFetch = window.fetch.bind(window);
-
-  window.fetch = (input, init) => {
-    try {
-      // Rewrite string URLs like "/api/..."
-      if (typeof input === "string" && input.startsWith("/api/") && ingressBase) {
-        input = ingressBase + input;
-      }
-
-      // Rewrite Request objects targeting same-origin "/api/..."
-      if (input instanceof Request && ingressBase) {
-        const url = new URL(input.url);
-        if (url.origin === window.location.origin && url.pathname.startsWith("/api/")) {
-          const newUrl = ingressBase + url.pathname + url.search;
-          input = new Request(newUrl, input);
-        }
-      }
-    } catch (e) {
-      // Ignore and fall back to original request
+  function redirectIfNeeded() {
+    const path = window.location.pathname.replace(/^\/api\/hassio_ingress\/[^/]+/, "");
+    if (path === "/" || path === "") {
+      // Try hash router first
+      if (window.location.hash && window.location.hash !== "#/") return;
+      // Try pushState router: redirect to /home (adjust if needed)
+      window.history.replaceState({}, "", window.location.pathname + "#/home");
     }
-    return origFetch(input, init);
-  };
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", redirectIfNeeded);
+  } else {
+    redirectIfNeeded();
+  }
 })();
 </script>
 """
+
+# Inject right after <head>
+html = html.replace(marker, marker + snippet, 1)
+index.write_text(html, encoding="utf-8")
+print("[BUILD] Injected SPA route fix for Home Assistant ingress")
+PY
 
 # Inject right after <head>
 html = html.replace(marker, marker + snippet, 1)
