@@ -60,7 +60,6 @@ RUN echo "[BUILD] Patching built UI bundles to avoid absolute /api/ paths..." &&
 RUN echo "[BUILD] Injecting ingress-safe fetch() rewrite into dist/ui/index.html..." && \
     python3 - <<'PY'
 from pathlib import Path
-import re
 
 index = Path("dist/ui/index.html")
 html = index.read_text(encoding="utf-8")
@@ -95,12 +94,6 @@ snippet = r"""
 html = html.replace(marker, marker + snippet, 1)
 index.write_text(html, encoding="utf-8")
 print("[BUILD] Injected SPA route fix for Home Assistant ingress")
-PY
-
-# Inject right after <head>
-html = html.replace(marker, marker + snippet, 1)
-index.write_text(html, encoding="utf-8")
-print("[BUILD] Injected fetch() rewrite into dist/ui/index.html")
 PY
 
 COPY run.sh /
