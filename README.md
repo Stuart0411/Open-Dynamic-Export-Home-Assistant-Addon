@@ -46,6 +46,13 @@ sep2-key.pem
 Update config with your CSIP credentials
 Restart the add-on
 
+## InfluxDB
+influxdb_host (default "" → disabled)
+influxdb_port (default "8086")
+influxdb_username, influxdb_password (InfluxDB v1)
+influxdb_admin_token, influxdb_org, influxdb_bucket (InfluxDB v2)
+influxdb_password and influxdb_admin_token use the password? schema type so the HA UI masks them.
+
 ## Configuration Example
 
 ```json
