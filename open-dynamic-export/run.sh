@@ -84,6 +84,26 @@ if [ -f "${ODE_CERT_DIR}/serca.pem" ]; then
   export NODE_EXTRA_CA_CERTS="${ODE_CERT_DIR}/serca.pem"
 fi
 
+# ---------------------------
+# Optional InfluxDB integration
+# ---------------------------
+# Pass through INFLUXDB_* environment variables when influxdb_host is set.
+# When unset, ODE skips InfluxDB logging (the data-history endpoints of the
+# web UI will return "InfluxDB isn't available", which is harmless).
+INFLUXDB_HOST_OPT="$(jq -r '.influxdb_host // ""' /data/options.json)"
+if [ -n "${INFLUXDB_HOST_OPT}" ]; then
+  export INFLUXDB_HOST="${INFLUXDB_HOST_OPT}"
+  export INFLUXDB_PORT="$(jq -r '.influxdb_port // "8086"' /data/options.json)"
+  export INFLUXDB_USERNAME="$(jq -r '.influxdb_username // ""' /data/options.json)"
+  export INFLUXDB_PASSWORD="$(jq -r '.influxdb_password // ""' /data/options.json)"
+  export INFLUXDB_ADMIN_TOKEN="$(jq -r '.influxdb_admin_token // ""' /data/options.json)"
+  export INFLUXDB_ORG="$(jq -r '.influxdb_org // "open-dynamic-export"' /data/options.json)"
+  export INFLUXDB_BUCKET="$(jq -r '.influxdb_bucket // "data"' /data/options.json)"
+  echo "[INFO] InfluxDB logging enabled (host=${INFLUXDB_HOST}:${INFLUXDB_PORT}, org=${INFLUXDB_ORG}, bucket=${INFLUXDB_BUCKET})"
+else
+  echo "[INFO] InfluxDB logging disabled (influxdb_host option is empty)"
+fi
+
 export NODE_ENV=production
 
 echo "[INFO] =========================================="
@@ -96,6 +116,7 @@ echo "[INFO] SEP2_CERT_FILE    : ${SEP2_CERT_FILE}"
 echo "[INFO] SEP2_KEY_FILE     : ${SEP2_KEY_FILE}"
 echo "[INFO] SEP2_PEN          : ${SEP2_PEN}"
 echo "[INFO] NODE_EXTRA_CA_CERTS: ${NODE_EXTRA_CA_CERTS:-<not set>}"
+echo "[INFO] INFLUXDB_HOST     : ${INFLUXDB_HOST:-<not set>}"
 
 cd /ode
 exec pnpm start

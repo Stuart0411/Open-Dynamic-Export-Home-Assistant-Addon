@@ -252,6 +252,24 @@ Logging verbosity: `trace`, `debug`, `info`, `warning`, `error`
 
 **Default:** `info`
 
+### InfluxDB (optional)
+
+The ODE web UI's data-history endpoints (`/api/data/connection`, `/api/data/generationLimit`, `/api/data/energize`, `/api/data/exportLimit`) read from InfluxDB. When `influxdb_host` is empty (the default), these endpoints return `"InfluxDB isn't available"` — this is harmless and does not affect inverter control.
+
+To enable InfluxDB logging, set `influxdb_host` to your InfluxDB host (e.g. `a0d7b954-influxdb` for the official add-on, reachable on the internal Docker network) and configure the other options as needed.
+
+| Option | Default | Notes |
+| --- | --- | --- |
+| `influxdb_host` | _(empty — disabled)_ | Hostname only, no scheme/port |
+| `influxdb_port` | `8086` | |
+| `influxdb_username` | _(empty)_ | InfluxDB v1 only |
+| `influxdb_password` | _(empty)_ | InfluxDB v1 only |
+| `influxdb_admin_token` | _(empty)_ | InfluxDB v2 admin token |
+| `influxdb_org` | `open-dynamic-export` | InfluxDB v2 |
+| `influxdb_bucket` | `data` | InfluxDB v2 |
+
+See the upstream [`.env.example`](https://github.com/longzheng/open-dynamic-export/blob/main/.env.example) for the corresponding environment variables.
+
 ---
 
 ## Troubleshooting
