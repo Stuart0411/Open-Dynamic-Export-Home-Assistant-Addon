@@ -78,6 +78,14 @@ snippet = r"""
   const m = window.location.pathname.match(/^(\/api\/hassio_ingress\/[^/]+)/);
   const ingressBase = m ? m[1] : "";
 
+  // Some HA ingress launches land on "/api/hassio_ingress/<token>" (no trailing slash),
+  // which can make the SPA router render Not Found on first load.
+  // Normalize to "/api/hassio_ingress/<token>/" before the app boots.
+  if (ingressBase && window.location.pathname === ingressBase) {
+    const target = ingressBase + "/" + window.location.search + window.location.hash;
+    window.history.replaceState(window.history.state, "", target);
+  }
+
   const origFetch = window.fetch.bind(window);
 
   window.fetch = (input, init) => {
