@@ -1,4 +1,6 @@
-ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest
+# Use the multi-arch Home Assistant base image so Supervisor can resolve
+# the correct platform (e.g. aarch64 on HA Green, amd64 on x86).
+ARG BUILD_FROM=ghcr.io/home-assistant/base:latest
 FROM ${BUILD_FROM}
 
 RUN apk add --no-cache \
