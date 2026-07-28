@@ -86,6 +86,31 @@ snippet = r"""
     window.history.replaceState(window.history.state, "", target);
   }
 
+  // If the UI still lands on a Not Found route under ingress, auto-navigate
+  // to the same Home route that works when users click the Home nav item.
+  const repairNotFoundRoute = () => {
+    if (!ingressBase) return;
+    if (sessionStorage.getItem("ode_ingress_route_repair_done") === "1") return;
+
+    const pageText = (document.body && document.body.textContent || "").toLowerCase();
+    if (!pageText.includes("not found")) return;
+
+    const homeLink = Array.from(document.querySelectorAll("a[href]"))
+      .find((a) => a.textContent && a.textContent.trim().toLowerCase() === "home");
+
+    if (homeLink && homeLink.getAttribute("href")) {
+      sessionStorage.setItem("ode_ingress_route_repair_done", "1");
+      const href = homeLink.getAttribute("href");
+      const target = new URL(href, window.location.href);
+      window.history.replaceState(window.history.state, "", target.pathname + target.search + target.hash);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    }
+  };
+
+  // Run after mount and once more after initial async rendering.
+  window.addEventListener("load", repairNotFoundRoute);
+  setTimeout(repairNotFoundRoute, 800);
+
   const origFetch = window.fetch.bind(window);
 
   window.fetch = (input, init) => {
