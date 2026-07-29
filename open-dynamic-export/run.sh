@@ -92,14 +92,32 @@ fi
 # web UI will return "InfluxDB isn't available", which is harmless).
 INFLUXDB_HOST_OPT="$(jq -r '.influxdb_host // ""' /data/options.json)"
 if [ -n "${INFLUXDB_HOST_OPT}" ]; then
+  INFLUXDB_PORT_OPT="$(jq -r '.influxdb_port // "8086"' /data/options.json)"
+  INFLUXDB_USERNAME_OPT="$(jq -r '.influxdb_username // ""' /data/options.json)"
+  INFLUXDB_PASSWORD_OPT="$(jq -r '.influxdb_password // ""' /data/options.json)"
+  INFLUXDB_ADMIN_TOKEN_OPT="$(jq -r '.influxdb_admin_token // ""' /data/options.json)"
+  INFLUXDB_ORG_OPT="$(jq -r '.influxdb_org // "open-dynamic-export"' /data/options.json)"
+  INFLUXDB_BUCKET_OPT="$(jq -r '.influxdb_bucket // "data"' /data/options.json)"
+
   export INFLUXDB_HOST="${INFLUXDB_HOST_OPT}"
-  export INFLUXDB_PORT="$(jq -r '.influxdb_port // "8086"' /data/options.json)"
-  export INFLUXDB_USERNAME="$(jq -r '.influxdb_username // ""' /data/options.json)"
-  export INFLUXDB_PASSWORD="$(jq -r '.influxdb_password // ""' /data/options.json)"
-  export INFLUXDB_ADMIN_TOKEN="$(jq -r '.influxdb_admin_token // ""' /data/options.json)"
-  export INFLUXDB_ORG="$(jq -r '.influxdb_org // "open-dynamic-export"' /data/options.json)"
-  export INFLUXDB_BUCKET="$(jq -r '.influxdb_bucket // "data"' /data/options.json)"
-  echo "[INFO] InfluxDB logging enabled (host=${INFLUXDB_HOST}:${INFLUXDB_PORT}, org=${INFLUXDB_ORG}, bucket=${INFLUXDB_BUCKET})"
+  export INFLUXDB_PORT="${INFLUXDB_PORT_OPT}"
+  export INFLUXDB_USERNAME="${INFLUXDB_USERNAME_OPT}"
+  export INFLUXDB_PASSWORD="${INFLUXDB_PASSWORD_OPT}"
+  export INFLUXDB_ORG="${INFLUXDB_ORG_OPT}"
+  export INFLUXDB_BUCKET="${INFLUXDB_BUCKET_OPT}"
+
+  if [ -n "${INFLUXDB_ADMIN_TOKEN_OPT}" ]; then
+    export INFLUXDB_ADMIN_TOKEN="${INFLUXDB_ADMIN_TOKEN_OPT}"
+    echo "[INFO] InfluxDB logging enabled with explicit token (host=${INFLUXDB_HOST}:${INFLUXDB_PORT}, org=${INFLUXDB_ORG}, bucket=${INFLUXDB_BUCKET})"
+  elif [ -n "${INFLUXDB_USERNAME_OPT}" ] && [ -n "${INFLUXDB_PASSWORD_OPT}" ]; then
+    # InfluxDB v1 compatibility mode for the v2 client: token is "username:password".
+    export INFLUXDB_ADMIN_TOKEN="${INFLUXDB_USERNAME_OPT}:${INFLUXDB_PASSWORD_OPT}"
+    echo "[INFO] InfluxDB v1 compatibility mode enabled using username/password credentials"
+    echo "[INFO] InfluxDB logging enabled (host=${INFLUXDB_HOST}:${INFLUXDB_PORT}, org=${INFLUXDB_ORG}, bucket=${INFLUXDB_BUCKET})"
+  else
+    echo "[WARNING] InfluxDB disabled: provide influxdb_admin_token (v2) or both influxdb_username and influxdb_password (v1 compatibility)."
+    unset INFLUXDB_HOST INFLUXDB_PORT INFLUXDB_USERNAME INFLUXDB_PASSWORD INFLUXDB_ADMIN_TOKEN INFLUXDB_ORG INFLUXDB_BUCKET
+  fi
 else
   echo "[INFO] InfluxDB logging disabled (influxdb_host option is empty)"
 fi
