@@ -60,7 +60,45 @@ else:
   print("[BUILD] Patched csipAus/index.ts DER list handling")
 PY
 
-# 3) Patch Vite base so asset URLs are relative
+# 3) Patch CSIP-AUS connection point registration so a 400 response does not crash startup
+RUN echo "[BUILD] Patching CSIP-AUS connection point registration (warn on failure)..." && \
+  python3 - <<'PY'
+from pathlib import Path
+import re
+
+p = Path("src/setpoints/csipAus/index.ts")
+s = p.read_text(encoding="utf-8")
+
+if "ConnectionPoint registration failed" in s:
+  print("[BUILD] csipAus/index.ts already patched for connection point registration, skipping")
+else:
+  pattern = re.compile(
+    r"""if \(endDevice\.connectionPointLink\?\.href\) \{\s*await this\.putConnectionPointId\(\{\s*connectionPointHref: endDevice\.connectionPointLink\.href,\s*\}\);\s*\}""",
+    re.MULTILINE,
+  )
+
+  replacement = """if (endDevice.connectionPointLink?.href) {
+                  try {
+                    await this.putConnectionPointId({
+                      connectionPointHref: endDevice.connectionPointLink.href,
+                    });
+                  } catch (error) {
+                    this.logger.warn(
+                      { error },
+                      'ConnectionPoint registration failed; continuing without in-band registration',
+                    );
+                  }
+                }"""
+
+  s, count = pattern.subn(replacement, s, count=1)
+  if count == 0:
+    raise SystemExit("[BUILD] ERROR: Could not locate connection point registration block in csipAus/index.ts")
+
+  p.write_text(s, encoding="utf-8")
+  print("[BUILD] Patched csipAus/index.ts connection point registration handling")
+PY
+
+# 4) Patch Vite base so asset URLs are relative
 RUN echo "[BUILD] Patching Vite base for HA ingress (base: ./)..." && \
     python3 - <<'PY'
 from pathlib import Path
@@ -80,14 +118,14 @@ else:
     print("[BUILD] vite.config.ts already has base:, skipping")
 PY
 
-# 4) Install + build
+# 5) Install + build
 RUN echo "[BUILD] Installing deps (pnpm)..." && \
     pnpm install --no-frozen-lockfile && \
     echo "[BUILD] Building..." && \
     pnpm run build && \
     echo "[BUILD] Build complete"
 
-# 5) Patch built UI bundles: make API calls relative
+# 6) Patch built UI bundles: make API calls relative
 RUN echo "[BUILD] Patching built UI bundles to avoid absolute /api/ paths..." && \
     (grep -R "api/coordinator/status" -n dist/ui/assets || true) && \
     find dist/ui/assets -type f -name "*.js" -print0 | xargs -0 sed -i \
@@ -96,7 +134,7 @@ RUN echo "[BUILD] Patching built UI bundles to avoid absolute /api/ paths..." &&
       -e 's|`\/api\/|`api\/|g' \
     && echo "[BUILD] UI bundle patch complete"
 
-# 6) Patch dist/ui/index.html to keep absolute /api/* calls inside the ingress path
+# 7) Patch dist/ui/index.html to keep absolute /api/* calls inside the ingress path
 RUN echo "[BUILD] Injecting ingress-safe fetch() rewrite into dist/ui/index.html..." && \
     python3 - <<'PY'
 from pathlib import Path
