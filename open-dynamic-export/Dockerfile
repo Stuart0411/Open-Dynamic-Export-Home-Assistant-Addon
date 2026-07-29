@@ -26,20 +26,20 @@ RUN git clone --depth 1 https://github.com/longzheng/open-dynamic-export.git . &
 RUN echo "[BUILD] Patching CSIP-AUS DER list handling (graceful when empty)..." && \
   python3 - <<'PY'
 from pathlib import Path
+import re
 
 p = Path("src/setpoints/csipAus/index.ts")
 s = p.read_text(encoding="utf-8")
 
-old = """            if (derList.ders.length !== 1) {
-        throw new Error(
-          `DERS list length is not 1, actual length ${derList.ders.length}`,
-        );
-      }
+if "No DERs found in DER list yet; waiting for CSIP-AUS provisioning" in s:
+  print("[BUILD] csipAus/index.ts already patched, skipping")
+else:
+  pattern = re.compile(
+    r"""if\s*\(\s*derList\.ders\.length\s*!==\s*1\s*\)\s*\{\s*throw new Error\(\s*`DERS list length is not 1, actual length \$\{derList\.ders\.length\}`,\s*\);\s*\}""",
+    re.MULTILINE,
+  )
 
-      const der = derList.ders.at(0)!;
-"""
-
-new = """            if (derList.ders.length === 0) {
+  replacement = """if (derList.ders.length === 0) {
         this.logger.warn(
           'No DERs found in DER list yet; waiting for CSIP-AUS provisioning',
         );
@@ -50,17 +50,14 @@ new = """            if (derList.ders.length === 0) {
         throw new Error(
           `DERS list length is not 1, actual length ${derList.ders.length}`,
         );
-      }
+      }"""
 
-      const der = derList.ders.at(0)!;
-"""
+  s, count = pattern.subn(replacement, s, count=1)
+  if count == 0:
+    raise SystemExit("[BUILD] ERROR: Could not locate DER length guard in csipAus/index.ts")
 
-if old not in s:
-  raise SystemExit("[BUILD] ERROR: Expected DER list block not found in csipAus/index.ts")
-
-s = s.replace(old, new, 1)
-p.write_text(s, encoding="utf-8")
-print("[BUILD] Patched csipAus/index.ts DER list handling")
+  p.write_text(s, encoding="utf-8")
+  print("[BUILD] Patched csipAus/index.ts DER list handling")
 PY
 
 # 3) Patch Vite base so asset URLs are relative
