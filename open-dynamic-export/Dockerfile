@@ -14,8 +14,6 @@ RUN apk add --no-cache \
     openssl \
     python3
 
-RUN npm install -g pnpm
-
 WORKDIR /ode
 
 # 1) Clone upstream
@@ -119,8 +117,15 @@ else:
 PY
 
 # 5) Install + build
-RUN echo "[BUILD] Installing deps (pnpm)..." && \
-    pnpm install --no-frozen-lockfile && \
+RUN echo "[BUILD] Preparing pnpm..." && \
+    if command -v corepack >/dev/null 2>&1; then \
+      corepack enable && corepack prepare pnpm@10.18.3 --activate; \
+    else \
+      npm install -g pnpm@10.18.3; \
+    fi && \
+    pnpm --version && \
+    echo "[BUILD] Installing deps (pnpm)..." && \
+    pnpm install --no-frozen-lockfile --config.manage-package-manager-versions=false && \
     echo "[BUILD] Building..." && \
     pnpm run build && \
     echo "[BUILD] Build complete"
